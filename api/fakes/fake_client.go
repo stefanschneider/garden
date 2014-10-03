@@ -3,12 +3,11 @@ package fakes
 
 import (
 	"sync"
-	"time"
 
 	"github.com/cloudfoundry-incubator/garden/api"
 )
 
-type FakeBackend struct {
+type FakeClient struct {
 	PingStub        func() error
 	pingMutex       sync.RWMutex
 	pingArgsForCall []struct{}
@@ -83,26 +82,9 @@ type FakeBackend struct {
 		result1 api.Volume
 		result2 error
 	}
-	StartStub        func() error
-	startMutex       sync.RWMutex
-	startArgsForCall []struct{}
-	startReturns struct {
-		result1 error
-	}
-	StopStub        func()
-	stopMutex       sync.RWMutex
-	stopArgsForCall []struct{}
-	GraceTimeStub        func(api.Container) time.Duration
-	graceTimeMutex       sync.RWMutex
-	graceTimeArgsForCall []struct {
-		arg1 api.Container
-	}
-	graceTimeReturns struct {
-		result1 time.Duration
-	}
 }
 
-func (fake *FakeBackend) Ping() error {
+func (fake *FakeClient) Ping() error {
 	fake.pingMutex.Lock()
 	fake.pingArgsForCall = append(fake.pingArgsForCall, struct{}{})
 	fake.pingMutex.Unlock()
@@ -113,20 +95,20 @@ func (fake *FakeBackend) Ping() error {
 	}
 }
 
-func (fake *FakeBackend) PingCallCount() int {
+func (fake *FakeClient) PingCallCount() int {
 	fake.pingMutex.RLock()
 	defer fake.pingMutex.RUnlock()
 	return len(fake.pingArgsForCall)
 }
 
-func (fake *FakeBackend) PingReturns(result1 error) {
+func (fake *FakeClient) PingReturns(result1 error) {
 	fake.PingStub = nil
 	fake.pingReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeBackend) Capacity() (api.Capacity, error) {
+func (fake *FakeClient) Capacity() (api.Capacity, error) {
 	fake.capacityMutex.Lock()
 	fake.capacityArgsForCall = append(fake.capacityArgsForCall, struct{}{})
 	fake.capacityMutex.Unlock()
@@ -137,13 +119,13 @@ func (fake *FakeBackend) Capacity() (api.Capacity, error) {
 	}
 }
 
-func (fake *FakeBackend) CapacityCallCount() int {
+func (fake *FakeClient) CapacityCallCount() int {
 	fake.capacityMutex.RLock()
 	defer fake.capacityMutex.RUnlock()
 	return len(fake.capacityArgsForCall)
 }
 
-func (fake *FakeBackend) CapacityReturns(result1 api.Capacity, result2 error) {
+func (fake *FakeClient) CapacityReturns(result1 api.Capacity, result2 error) {
 	fake.CapacityStub = nil
 	fake.capacityReturns = struct {
 		result1 api.Capacity
@@ -151,7 +133,7 @@ func (fake *FakeBackend) CapacityReturns(result1 api.Capacity, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeBackend) Create(arg1 api.ContainerSpec) (api.Container, error) {
+func (fake *FakeClient) Create(arg1 api.ContainerSpec) (api.Container, error) {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		arg1 api.ContainerSpec
@@ -164,19 +146,19 @@ func (fake *FakeBackend) Create(arg1 api.ContainerSpec) (api.Container, error) {
 	}
 }
 
-func (fake *FakeBackend) CreateCallCount() int {
+func (fake *FakeClient) CreateCallCount() int {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeBackend) CreateArgsForCall(i int) api.ContainerSpec {
+func (fake *FakeClient) CreateArgsForCall(i int) api.ContainerSpec {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return fake.createArgsForCall[i].arg1
 }
 
-func (fake *FakeBackend) CreateReturns(result1 api.Container, result2 error) {
+func (fake *FakeClient) CreateReturns(result1 api.Container, result2 error) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 api.Container
@@ -184,7 +166,7 @@ func (fake *FakeBackend) CreateReturns(result1 api.Container, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeBackend) Destroy(handle string) error {
+func (fake *FakeClient) Destroy(handle string) error {
 	fake.destroyMutex.Lock()
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
 		handle string
@@ -197,26 +179,26 @@ func (fake *FakeBackend) Destroy(handle string) error {
 	}
 }
 
-func (fake *FakeBackend) DestroyCallCount() int {
+func (fake *FakeClient) DestroyCallCount() int {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
 	return len(fake.destroyArgsForCall)
 }
 
-func (fake *FakeBackend) DestroyArgsForCall(i int) string {
+func (fake *FakeClient) DestroyArgsForCall(i int) string {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
 	return fake.destroyArgsForCall[i].handle
 }
 
-func (fake *FakeBackend) DestroyReturns(result1 error) {
+func (fake *FakeClient) DestroyReturns(result1 error) {
 	fake.DestroyStub = nil
 	fake.destroyReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeBackend) Containers(arg1 api.Properties) ([]api.Container, error) {
+func (fake *FakeClient) Containers(arg1 api.Properties) ([]api.Container, error) {
 	fake.containersMutex.Lock()
 	fake.containersArgsForCall = append(fake.containersArgsForCall, struct {
 		arg1 api.Properties
@@ -229,19 +211,19 @@ func (fake *FakeBackend) Containers(arg1 api.Properties) ([]api.Container, error
 	}
 }
 
-func (fake *FakeBackend) ContainersCallCount() int {
+func (fake *FakeClient) ContainersCallCount() int {
 	fake.containersMutex.RLock()
 	defer fake.containersMutex.RUnlock()
 	return len(fake.containersArgsForCall)
 }
 
-func (fake *FakeBackend) ContainersArgsForCall(i int) api.Properties {
+func (fake *FakeClient) ContainersArgsForCall(i int) api.Properties {
 	fake.containersMutex.RLock()
 	defer fake.containersMutex.RUnlock()
 	return fake.containersArgsForCall[i].arg1
 }
 
-func (fake *FakeBackend) ContainersReturns(result1 []api.Container, result2 error) {
+func (fake *FakeClient) ContainersReturns(result1 []api.Container, result2 error) {
 	fake.ContainersStub = nil
 	fake.containersReturns = struct {
 		result1 []api.Container
@@ -249,7 +231,7 @@ func (fake *FakeBackend) ContainersReturns(result1 []api.Container, result2 erro
 	}{result1, result2}
 }
 
-func (fake *FakeBackend) Lookup(handle string) (api.Container, error) {
+func (fake *FakeClient) Lookup(handle string) (api.Container, error) {
 	fake.lookupMutex.Lock()
 	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
 		handle string
@@ -262,19 +244,19 @@ func (fake *FakeBackend) Lookup(handle string) (api.Container, error) {
 	}
 }
 
-func (fake *FakeBackend) LookupCallCount() int {
+func (fake *FakeClient) LookupCallCount() int {
 	fake.lookupMutex.RLock()
 	defer fake.lookupMutex.RUnlock()
 	return len(fake.lookupArgsForCall)
 }
 
-func (fake *FakeBackend) LookupArgsForCall(i int) string {
+func (fake *FakeClient) LookupArgsForCall(i int) string {
 	fake.lookupMutex.RLock()
 	defer fake.lookupMutex.RUnlock()
 	return fake.lookupArgsForCall[i].handle
 }
 
-func (fake *FakeBackend) LookupReturns(result1 api.Container, result2 error) {
+func (fake *FakeClient) LookupReturns(result1 api.Container, result2 error) {
 	fake.LookupStub = nil
 	fake.lookupReturns = struct {
 		result1 api.Container
@@ -282,7 +264,7 @@ func (fake *FakeBackend) LookupReturns(result1 api.Container, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeBackend) CreateVolume(arg1 api.VolumeSpec) (api.Volume, error) {
+func (fake *FakeClient) CreateVolume(arg1 api.VolumeSpec) (api.Volume, error) {
 	fake.createVolumeMutex.Lock()
 	fake.createVolumeArgsForCall = append(fake.createVolumeArgsForCall, struct {
 		arg1 api.VolumeSpec
@@ -295,19 +277,19 @@ func (fake *FakeBackend) CreateVolume(arg1 api.VolumeSpec) (api.Volume, error) {
 	}
 }
 
-func (fake *FakeBackend) CreateVolumeCallCount() int {
+func (fake *FakeClient) CreateVolumeCallCount() int {
 	fake.createVolumeMutex.RLock()
 	defer fake.createVolumeMutex.RUnlock()
 	return len(fake.createVolumeArgsForCall)
 }
 
-func (fake *FakeBackend) CreateVolumeArgsForCall(i int) api.VolumeSpec {
+func (fake *FakeClient) CreateVolumeArgsForCall(i int) api.VolumeSpec {
 	fake.createVolumeMutex.RLock()
 	defer fake.createVolumeMutex.RUnlock()
 	return fake.createVolumeArgsForCall[i].arg1
 }
 
-func (fake *FakeBackend) CreateVolumeReturns(result1 api.Volume, result2 error) {
+func (fake *FakeClient) CreateVolumeReturns(result1 api.Volume, result2 error) {
 	fake.CreateVolumeStub = nil
 	fake.createVolumeReturns = struct {
 		result1 api.Volume
@@ -315,7 +297,7 @@ func (fake *FakeBackend) CreateVolumeReturns(result1 api.Volume, result2 error) 
 	}{result1, result2}
 }
 
-func (fake *FakeBackend) DestroyVolume(handle string) error {
+func (fake *FakeClient) DestroyVolume(handle string) error {
 	fake.destroyVolumeMutex.Lock()
 	fake.destroyVolumeArgsForCall = append(fake.destroyVolumeArgsForCall, struct {
 		handle string
@@ -328,26 +310,26 @@ func (fake *FakeBackend) DestroyVolume(handle string) error {
 	}
 }
 
-func (fake *FakeBackend) DestroyVolumeCallCount() int {
+func (fake *FakeClient) DestroyVolumeCallCount() int {
 	fake.destroyVolumeMutex.RLock()
 	defer fake.destroyVolumeMutex.RUnlock()
 	return len(fake.destroyVolumeArgsForCall)
 }
 
-func (fake *FakeBackend) DestroyVolumeArgsForCall(i int) string {
+func (fake *FakeClient) DestroyVolumeArgsForCall(i int) string {
 	fake.destroyVolumeMutex.RLock()
 	defer fake.destroyVolumeMutex.RUnlock()
 	return fake.destroyVolumeArgsForCall[i].handle
 }
 
-func (fake *FakeBackend) DestroyVolumeReturns(result1 error) {
+func (fake *FakeClient) DestroyVolumeReturns(result1 error) {
 	fake.DestroyVolumeStub = nil
 	fake.destroyVolumeReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeBackend) LookupVolume(handle string) (api.Volume, error) {
+func (fake *FakeClient) LookupVolume(handle string) (api.Volume, error) {
 	fake.lookupVolumeMutex.Lock()
 	fake.lookupVolumeArgsForCall = append(fake.lookupVolumeArgsForCall, struct {
 		handle string
@@ -360,19 +342,19 @@ func (fake *FakeBackend) LookupVolume(handle string) (api.Volume, error) {
 	}
 }
 
-func (fake *FakeBackend) LookupVolumeCallCount() int {
+func (fake *FakeClient) LookupVolumeCallCount() int {
 	fake.lookupVolumeMutex.RLock()
 	defer fake.lookupVolumeMutex.RUnlock()
 	return len(fake.lookupVolumeArgsForCall)
 }
 
-func (fake *FakeBackend) LookupVolumeArgsForCall(i int) string {
+func (fake *FakeClient) LookupVolumeArgsForCall(i int) string {
 	fake.lookupVolumeMutex.RLock()
 	defer fake.lookupVolumeMutex.RUnlock()
 	return fake.lookupVolumeArgsForCall[i].handle
 }
 
-func (fake *FakeBackend) LookupVolumeReturns(result1 api.Volume, result2 error) {
+func (fake *FakeClient) LookupVolumeReturns(result1 api.Volume, result2 error) {
 	fake.LookupVolumeStub = nil
 	fake.lookupVolumeReturns = struct {
 		result1 api.Volume
@@ -380,75 +362,4 @@ func (fake *FakeBackend) LookupVolumeReturns(result1 api.Volume, result2 error) 
 	}{result1, result2}
 }
 
-func (fake *FakeBackend) Start() error {
-	fake.startMutex.Lock()
-	fake.startArgsForCall = append(fake.startArgsForCall, struct{}{})
-	fake.startMutex.Unlock()
-	if fake.StartStub != nil {
-		return fake.StartStub()
-	} else {
-		return fake.startReturns.result1
-	}
-}
-
-func (fake *FakeBackend) StartCallCount() int {
-	fake.startMutex.RLock()
-	defer fake.startMutex.RUnlock()
-	return len(fake.startArgsForCall)
-}
-
-func (fake *FakeBackend) StartReturns(result1 error) {
-	fake.StartStub = nil
-	fake.startReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeBackend) Stop() {
-	fake.stopMutex.Lock()
-	fake.stopArgsForCall = append(fake.stopArgsForCall, struct{}{})
-	fake.stopMutex.Unlock()
-	if fake.StopStub != nil {
-		fake.StopStub()
-	}
-}
-
-func (fake *FakeBackend) StopCallCount() int {
-	fake.stopMutex.RLock()
-	defer fake.stopMutex.RUnlock()
-	return len(fake.stopArgsForCall)
-}
-
-func (fake *FakeBackend) GraceTime(arg1 api.Container) time.Duration {
-	fake.graceTimeMutex.Lock()
-	fake.graceTimeArgsForCall = append(fake.graceTimeArgsForCall, struct {
-		arg1 api.Container
-	}{arg1})
-	fake.graceTimeMutex.Unlock()
-	if fake.GraceTimeStub != nil {
-		return fake.GraceTimeStub(arg1)
-	} else {
-		return fake.graceTimeReturns.result1
-	}
-}
-
-func (fake *FakeBackend) GraceTimeCallCount() int {
-	fake.graceTimeMutex.RLock()
-	defer fake.graceTimeMutex.RUnlock()
-	return len(fake.graceTimeArgsForCall)
-}
-
-func (fake *FakeBackend) GraceTimeArgsForCall(i int) api.Container {
-	fake.graceTimeMutex.RLock()
-	defer fake.graceTimeMutex.RUnlock()
-	return fake.graceTimeArgsForCall[i].arg1
-}
-
-func (fake *FakeBackend) GraceTimeReturns(result1 time.Duration) {
-	fake.GraceTimeStub = nil
-	fake.graceTimeReturns = struct {
-		result1 time.Duration
-	}{result1}
-}
-
-var _ api.Backend = new(FakeBackend)
+var _ api.Client = new(FakeClient)
