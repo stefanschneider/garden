@@ -1102,6 +1102,8 @@ func (s *GardenServer) handleBindVolume(w http.ResponseWriter, r *http.Request) 
 	hLog := s.logger.Session("bind-volume", lager.Data{
 		"container-handle": containerHandle,
 		"volume-handle":    volumeHandle,
+		"destination-path": request.GetDestinationPath(),
+		"mode":             request.GetMode(),
 	})
 
 	container, err := s.backend.Lookup(containerHandle)
