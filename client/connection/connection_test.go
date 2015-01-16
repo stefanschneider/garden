@@ -575,11 +575,16 @@ var _ = Describe("Connection", func() {
 			BeforeEach(func() {
 				port = 42
 				portRange = ""
-				protoc = protocol.NetOutRequest_ALL
+				protoc = protocol.NetOutRequest_TCP
 			})
 
 			It("should return the port", func() {
-				err := connection.NetOut("foo-handle", "foo-network", 42, "", garden.ProtocolAll, -1, -1, false)
+				err := connection.NetOut("foo-handle",
+					garden.TCPRule{
+						Network: "foo-network",
+						Port:    42,
+						Log:     false,
+					})
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 
@@ -589,13 +594,26 @@ var _ = Describe("Connection", func() {
 				})
 
 				It("should record that we want logging", func() {
-					err := connection.NetOut("foo-handle", "foo-network", 42, "", garden.ProtocolAll, -1, -1, logging)
+					err := connection.NetOut("foo-handle",
+						garden.TCPRule{
+							Network: "foo-network",
+							Port:    42,
+							Log:     logging,
+						})
 					Ω(err).ShouldNot(HaveOccurred())
 				})
 			})
 
 			It("returns an error if the protocol is unknown", func() {
-				err := connection.NetOut("foo-handle", "foo-network", 42, "", 58, -1, -1, false)
+				err := connection.NetOut("foo-handle",
+					garden.NetOutRule{
+						Network:  "foo-network",
+						Port:     42,
+						Protocol: 58,
+						IcmpType: -1,
+						IcmpCode: -1,
+						Log:      false,
+					})
 				Ω(err).Should(MatchError("invalid protocol"))
 			})
 		})
@@ -608,7 +626,11 @@ var _ = Describe("Connection", func() {
 			})
 
 			It("receives a message containing the UDP protocol", func() {
-				err := connection.NetOut("foo-handle", "foo-network", 0, "8080:8081", garden.ProtocolUDP, -1, -1, false)
+				err := connection.NetOut("foo-handle",
+					garden.UDPRule{
+						Network:   "foo-network",
+						PortRange: garden.PortRange{8080, 8081},
+					})
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
@@ -621,7 +643,12 @@ var _ = Describe("Connection", func() {
 			})
 
 			It("should send the correct values", func() {
-				err := connection.NetOut("foo-handle", "foo-network", 42, "8080:8081", garden.ProtocolUDP, -1, -1, false)
+				err := connection.NetOut("foo-handle",
+					garden.UDPRule{
+						Network:   "foo-network",
+						Port:      42,
+						PortRange: garden.PortRange{8080, 8081},
+					})
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
@@ -636,7 +663,12 @@ var _ = Describe("Connection", func() {
 			})
 
 			It("should send the correct values", func() {
-				err := connection.NetOut("foo-handle", "foo-network", 0, "", garden.ProtocolICMP, 3, 2, false)
+				err := connection.NetOut("foo-handle",
+					garden.ICMPRule{
+						Network: "foo-network",
+						Type:    3,
+						Code:    2,
+					})
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})

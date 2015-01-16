@@ -511,35 +511,53 @@ var _ = Describe("Container", func() {
 	Describe("NetOut", func() {
 		ItForwardsPortRequestsOverTheConnectionForProtocol := func(name string, protocol garden.Protocol) {
 			It(fmt.Sprintf("sends a net out request with the %s protocol and a port", name), func() {
-				err := container.NetOut("some-network", 1234, "", protocol, 2, 3, true)
+				err := container.NetOut(garden.NetOutRule{
+					Network:  "some-network",
+					Port:     1234,
+					Protocol: protocol,
+					IcmpType: 2,
+					IcmpCode: 3,
+					Log:      true,
+				})
 				Ω(err).ShouldNot(HaveOccurred())
 
-				h, network, port, portRange, protocol, icmpType, icmpCode, log := fakeConnection.NetOutArgsForCall(0)
+				h, ruler := fakeConnection.NetOutArgsForCall(0)
+				rule := ruler.Rule()
+
 				Ω(h).Should(Equal("some-handle"))
-				Ω(network).Should(Equal("some-network"))
-				Ω(port).Should(Equal(uint32(1234)))
-				Ω(portRange).Should(Equal(""))
-				Ω(protocol).Should(Equal(protocol))
-				Ω(icmpType).Should(Equal(int32(2)))
-				Ω(icmpCode).Should(Equal(int32(3)))
-				Ω(log).Should(Equal(true))
+				Ω(rule.Network).Should(Equal("some-network"))
+				Ω(rule.Port).Should(Equal(uint32(1234)))
+				Ω(rule.PortRange).Should(Equal(garden.PortRange{}))
+				Ω(rule.Protocol).Should(Equal(protocol))
+				Ω(rule.IcmpType).Should(Equal(int32(2)))
+				Ω(rule.IcmpCode).Should(Equal(int32(3)))
+				Ω(rule.Log).Should(Equal(true))
 			})
 		}
 
 		ItForwardsPortRangeRequestsOverTheConnectionForProtocol := func(name string, protocol garden.Protocol) {
 			It("sends a net out request with a port range", func() {
-				err := container.NetOut("some-network", 0, "80:81", protocol, 2, 3, false)
+				err := container.NetOut(garden.NetOutRule{
+					Network:   "some-network",
+					PortRange: garden.PortRange{80, 81},
+					Protocol:  protocol,
+					IcmpType:  2,
+					IcmpCode:  3,
+					Log:       false,
+				})
 				Ω(err).ShouldNot(HaveOccurred())
 
-				h, network, port, portRange, protocol, icmpType, icmpCode, log := fakeConnection.NetOutArgsForCall(0)
+				h, ruler := fakeConnection.NetOutArgsForCall(0)
+				rule := ruler.Rule()
+
 				Ω(h).Should(Equal("some-handle"))
-				Ω(network).Should(Equal("some-network"))
-				Ω(port).Should(Equal(uint32(0)))
-				Ω(portRange).Should(Equal("80:81"))
-				Ω(protocol).Should(Equal(protocol))
-				Ω(icmpType).Should(Equal(int32(2)))
-				Ω(icmpCode).Should(Equal(int32(3)))
-				Ω(log).Should(Equal(false))
+				Ω(rule.Network).Should(Equal("some-network"))
+				Ω(rule.Port).Should(Equal(uint32(0)))
+				Ω(rule.PortRange).Should(Equal(garden.PortRange{80, 81}))
+				Ω(rule.Protocol).Should(Equal(protocol))
+				Ω(rule.IcmpType).Should(Equal(int32(2)))
+				Ω(rule.IcmpCode).Should(Equal(int32(3)))
+				Ω(rule.Log).Should(Equal(false))
 			})
 		}
 
@@ -556,7 +574,14 @@ var _ = Describe("Container", func() {
 			})
 
 			It("returns the error", func() {
-				err := container.NetOut("some-network", 1234, "", garden.ProtocolAll, -1, -1, false)
+				err := container.NetOut(garden.NetOutRule{
+					Network:  "some-network",
+					Port:     1234,
+					Protocol: garden.ProtocolAll,
+					IcmpType: -1,
+					IcmpCode: -1,
+					Log:      false,
+				})
 				Ω(err).Should(Equal(disaster))
 			})
 		})

@@ -715,17 +715,20 @@ func (s *GardenServer) handleNetIn(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func validPortRange(portRange string) bool {
+func validPortRange(portRange string) (garden.PortRange, bool) {
+	lo, hi, valid := 0, 0, true
+
 	if portRange != "" {
-		r := strings.Split(portRange, ":")
-		if len(r) != 2 {
-			return false
+		if r := strings.Split(portRange, ":"); len(r) != 2 {
+			valid = false
+		} else {
+			var startErr, endErr error
+			lo, startErr = strconv.Atoi(r[0])
+			hi, endErr = strconv.Atoi(r[1])
+			valid = startErr == nil && endErr == nil && lo > 0 && lo <= 65535 && hi > 0 && hi <= 65535
 		}
-		lo, startErr := strconv.Atoi(r[0])
-		hi, endErr := strconv.Atoi(r[1])
-		return startErr == nil && endErr == nil && lo > 0 && lo <= 65535 && hi > 0 && hi <= 65535
 	}
-	return true
+	return garden.PortRange{uint32(lo), uint32(hi)}, valid
 }
 
 func (s *GardenServer) handleNetOut(w http.ResponseWriter, r *http.Request) {
@@ -762,7 +765,8 @@ func (s *GardenServer) handleNetOut(w http.ResponseWriter, r *http.Request) {
 	icmpType := request.GetIcmpType()
 	icmpCode := request.GetIcmpCode()
 
-	if !validPortRange(portRange) {
+	pRange, valid := validPortRange(portRange)
+	if !valid {
 		err := fmt.Errorf("invalid port range: %q", portRange)
 		s.writeError(w, err, hLog)
 		return
@@ -786,7 +790,7 @@ func (s *GardenServer) handleNetOut(w http.ResponseWriter, r *http.Request) {
 		"icmpCode":  icmpCode,
 	})
 
-	err = container.NetOut(network, port, portRange, protoc, icmpType, icmpCode, request.GetLog())
+	err = container.NetOut(garden.NetOutRule{network, port, pRange, protoc, icmpType, icmpCode, request.GetLog()})
 	if err != nil {
 		s.writeError(w, err, hLog)
 		return

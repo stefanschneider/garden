@@ -62,7 +62,7 @@ type Connection interface {
 	Attach(handle string, processID uint32, io garden.ProcessIO) (garden.Process, error)
 
 	NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error)
-	NetOut(handle string, network string, port uint32, portRange string, protocol garden.Protocol, icmpType int32, icmpCode int32, log bool) error
+	NetOut(handle string, netOutRuler garden.NetOutRuler) error
 
 	GetProperty(handle string, name string) (string, error)
 	SetProperty(handle string, name string, value string) error
@@ -365,10 +365,13 @@ func (c *connection) NetIn(handle string, hostPort, containerPort uint32) (uint3
 	return res.GetHostPort(), res.GetContainerPort(), nil
 }
 
-func (c *connection) NetOut(handle string, network string, port uint32, portRange string, netProto garden.Protocol, icmpType int32, icmpCode int32, log bool) error {
+func (c *connection) NetOut(handle string, netOutRuler garden.NetOutRuler) error {
+
+	rule := netOutRuler.Rule()
+
 	var np protocol.NetOutRequest_Protocol
 
-	switch netProto {
+	switch rule.Protocol {
 	case garden.ProtocolTCP:
 		np = protocol.NetOutRequest_TCP
 	case garden.ProtocolICMP:
@@ -385,13 +388,13 @@ func (c *connection) NetOut(handle string, network string, port uint32, portRang
 		routes.NetOut,
 		&protocol.NetOutRequest{
 			Handle:    proto.String(handle),
-			Network:   proto.String(network),
-			Port:      proto.Uint32(port),
-			PortRange: proto.String(portRange),
-			Log:       proto.Bool(log),
+			Network:   proto.String(rule.Network),
+			Port:      proto.Uint32(rule.Port),
+			PortRange: proto.String(rule.PortRange.String()),
+			Log:       proto.Bool(rule.Log),
 			Protocol:  &np,
-			IcmpType:  proto.Int32(icmpType),
-			IcmpCode:  proto.Int32(icmpCode),
+			IcmpType:  proto.Int32(rule.IcmpType),
+			IcmpCode:  proto.Int32(rule.IcmpCode),
 		},
 		&protocol.NetOutResponse{},
 		rata.Params{

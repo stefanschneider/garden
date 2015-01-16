@@ -1,8 +1,11 @@
 package garden
 
 import (
+	"fmt"
 	"io"
 )
+
+//go:generate counterfeiter . Container
 
 type Container interface {
 	Handle() string
@@ -56,6 +59,7 @@ type Container interface {
 	//
 	// TODO: explain how disk management works.
 	LimitDisk(limits DiskLimits) error
+
 	CurrentDiskLimits() (DiskLimits, error)
 
 	// Limits the memory usage for a container.
@@ -108,7 +112,9 @@ type Container interface {
 	//
 	// Errors:
 	// * None.
-	NetOut(network string, port uint32, portRange string, protocol Protocol, icmpType int32, icmpCode int32, log bool) error
+	// NetOut(network string, port uint32, portRange string, protocol Protocol, icmpType int32, icmpCode int32, log bool) error
+
+	NetOut(NetOutRuler) error
 
 	// Run a script inside a container.
 	//
@@ -142,6 +148,56 @@ type Container interface {
 	// Errors:
 	// * None.
 	RemoveProperty(name string) error
+}
+
+type NetOutRuler interface {
+	Rule() NetOutRule
+}
+
+type NetOutRule struct {
+	Network   string
+	Port      uint32
+	PortRange PortRange
+	Protocol  Protocol
+	IcmpType  int32
+	IcmpCode  int32
+	Log       bool
+}
+
+type PortRange struct {
+	Start uint32
+	End   uint32
+}
+
+func (pr PortRange) String() string {
+	if pr.Start == 0 && pr.End == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d:%d", pr.Start, pr.End)
+}
+
+type AllRule struct {
+	Network string
+	Log     bool
+}
+
+type UDPRule struct {
+	Network   string
+	Port      uint32
+	PortRange PortRange
+}
+
+type ICMPRule struct {
+	Network string
+	Type    int32
+	Code    int32
+}
+
+type TCPRule struct {
+	Network   string
+	Port      uint32
+	PortRange PortRange
+	Log       bool
 }
 
 type Protocol uint8
@@ -182,6 +238,8 @@ type ProcessIO struct {
 	Stdout io.Writer
 	Stderr io.Writer
 }
+
+//go:generate counterfeiter . Process
 
 type Process interface {
 	ID() uint32
@@ -312,4 +370,56 @@ type ResourceLimits struct {
 	Rtprio     *uint64
 	Sigpending *uint64
 	Stack      *uint64
+}
+
+func (r NetOutRule) Rule() NetOutRule {
+	return r
+}
+
+func (r AllRule) Rule() NetOutRule {
+	return NetOutRule{
+		Network:   r.Network,
+		Port:      0,
+		PortRange: PortRange{},
+		Protocol:  ProtocolAll,
+		IcmpType:  -1,
+		IcmpCode:  -1,
+		Log:       r.Log,
+	}
+}
+
+func (r UDPRule) Rule() NetOutRule {
+	return NetOutRule{
+		Network:   r.Network,
+		Port:      r.Port,
+		PortRange: r.PortRange,
+		Protocol:  ProtocolUDP,
+		IcmpType:  -1,
+		IcmpCode:  -1,
+		Log:       false,
+	}
+}
+
+func (r ICMPRule) Rule() NetOutRule {
+	return NetOutRule{
+		Network:   r.Network,
+		Port:      0,
+		PortRange: PortRange{},
+		Protocol:  ProtocolICMP,
+		IcmpType:  r.Type,
+		IcmpCode:  r.Code,
+		Log:       false,
+	}
+}
+
+func (r TCPRule) Rule() NetOutRule {
+	return NetOutRule{
+		Network:   r.Network,
+		Port:      r.Port,
+		PortRange: r.PortRange,
+		Protocol:  ProtocolTCP,
+		IcmpType:  -1,
+		IcmpCode:  -1,
+		Log:       r.Log,
+	}
 }
