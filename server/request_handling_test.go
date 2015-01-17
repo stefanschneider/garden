@@ -1034,7 +1034,7 @@ var _ = Describe("When a client connects", func() {
 				Ω(rule.Network).Should(Equal("1.2.3.4/22"))
 				Ω(rule.Port).Should(Equal(uint32(456)))
 				Ω(rule.PortRange).Should(Equal(garden.PortRange{}))
-				Ω(rule.Protocol).Should(Equal(garden.ProtocolAll))
+				Ω(rule.Protocol).Should(Equal(garden.ProtocolTCP))
 				Ω(rule.Log).Should(Equal(false))
 			})
 
@@ -1052,7 +1052,7 @@ var _ = Describe("When a client connects", func() {
 				Ω(rule.Network).Should(Equal("1.2.3.4/22"))
 				Ω(rule.Port).Should(Equal(uint32(0)))
 				Ω(rule.PortRange).Should(Equal(garden.PortRange{80, 81}))
-				Ω(rule.Protocol).Should(Equal(garden.ProtocolAll))
+				Ω(rule.Protocol).Should(Equal(garden.ProtocolTCP))
 				Ω(rule.Log).Should(Equal(false))
 			})
 
@@ -1114,93 +1114,83 @@ var _ = Describe("When a client connects", func() {
 			})
 
 			Context("with an invalid port range", func() {
-				It("should return an error when the port range is malformed", func() {
-					err := container.NetOut("foo-network", 0, "8080-8081", garden.ProtocolAll, -1, -1, false)
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "8080-8081"`))
-				})
-
-				It("should return an error when there are too many colons in the port range", func() {
-					err := container.NetOut("foo-network", 0, "1:2:3", garden.ProtocolAll, -1, -1, false)
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "1:2:3"`))
-				})
-
-				It("should return an error when the port range has no start", func() {
-					err := container.NetOut("foo-network", 0, ":8081", garden.ProtocolAll, -1, -1, false)
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: ":8081"`))
-				})
-
-				It("should return an error when the port range has no end", func() {
-					err := container.NetOut("foo-network", 0, "8080:", garden.ProtocolAll, -1, -1, false)
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "8080:"`))
-				})
-
-				It("should return an error when the start of the port range is not an integer", func() {
-					err := container.NetOut("foo-network", 0, "x:8081", garden.ProtocolAll, -1, -1, false)
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "x:8081"`))
-				})
-
-				It("should return an error when the end of the port range is not an integer", func() {
-					err := container.NetOut("foo-network", 0, "8080:x", garden.ProtocolAll, -1, -1, false)
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "8080:x"`))
-				})
-
 				It("should return an error when the start of the port range is 0", func() {
-					err := container.NetOut("foo-network", 0, "0:8081", garden.ProtocolAll, -1, -1, false)
+					err := container.NetOut(garden.TCPRule{
+						Network:   "foo-network",
+						PortRange: garden.PortRange{0, 8081},
+						Log:       false,
+					})
 					Ω(err).Should(HaveOccurred())
 					Ω(err).Should(MatchError(`invalid port range: "0:8081"`))
 				})
 
 				It("should return an error when the end of the port range is 0", func() {
-					err := container.NetOut("foo-network", 0, "8080:0", garden.ProtocolAll, -1, -1, false)
+					err := container.NetOut(garden.TCPRule{
+						Network:   "foo-network",
+						PortRange: garden.PortRange{8080, 0},
+						Log:       false,
+					})
 					Ω(err).Should(HaveOccurred())
 					Ω(err).Should(MatchError(`invalid port range: "8080:0"`))
 				})
 
-				It("should return an error when the start of the port range is negative", func() {
-					err := container.NetOut("foo-network", 0, "-8080:8081", garden.ProtocolAll, -1, -1, false)
+				It("should return an error when the start of the port range is greater than the end of the port range", func() {
+					err := container.NetOut(garden.TCPRule{
+						Network:   "foo-network",
+						PortRange: garden.PortRange{8080, 8070},
+						Log:       false,
+					})
 					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "-8080:8081"`))
-				})
-
-				It("should return an error when the end of the port range is negative", func() {
-					err := container.NetOut("foo-network", 0, "8080:-8081", garden.ProtocolAll, -1, -1, false)
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "8080:-8081"`))
+					Ω(err).Should(MatchError(`invalid port range: "8080:8070"`))
 				})
 
 				It("should return an error when the start of the port range is too large", func() {
-					err := container.NetOut("foo-network", 0, "65536:8081", garden.ProtocolAll, -1, -1, false)
+					err := container.NetOut(garden.TCPRule{
+						Network:   "foo-network",
+						PortRange: garden.PortRange{65536, 8081},
+						Log:       false,
+					})
 					Ω(err).Should(HaveOccurred())
 					Ω(err).Should(MatchError(`invalid port range: "65536:8081"`))
 				})
 
 				It("should return an error when the end of the port range is too large", func() {
-					err := container.NetOut("foo-network", 0, "8080:65536", garden.ProtocolAll, -1, -1, false)
+					err := container.NetOut(garden.TCPRule{
+						Network:   "foo-network",
+						PortRange: garden.PortRange{8080, 65536},
+						Log:       false,
+					})
 					Ω(err).Should(HaveOccurred())
 					Ω(err).Should(MatchError(`invalid port range: "8080:65536"`))
 				})
 
 				It("should return an error when the start of the port range is much too large", func() {
-					err := container.NetOut("foo-network", 0, "200000000000000000000000000000000000000:8081", garden.ProtocolAll, -1, -1, false)
+					err := container.NetOut(garden.TCPRule{
+						Network:   "foo-network",
+						PortRange: garden.PortRange{200000000, 8081},
+						Log:       false,
+					})
 					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "200000000000000000000000000000000000000:8081"`))
+					Ω(err).Should(MatchError(`invalid port range: "200000000:8081"`))
 				})
 
 			})
 
 			itResetsGraceTimeWhenHandling(func() {
-				err := container.NetOut("1.2.3.4/22", 456, "", garden.ProtocolAll, -1, -1, false)
+				err := container.NetOut(garden.TCPRule{
+					Network: "1.2.3.4/22",
+					Port:    456,
+					Log:     false,
+				})
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 
 			itFailsWhenTheContainerIsNotFound(func() {
-				err := container.NetOut("1.2.3.4/22", 456, "", garden.ProtocolAll, -1, -1, false)
+				err := container.NetOut(garden.TCPRule{
+					Network: "1.2.3.4/22",
+					Port:    456,
+					Log:     false,
+				})
 				Ω(err).Should(HaveOccurred())
 			})
 
@@ -1210,7 +1200,11 @@ var _ = Describe("When a client connects", func() {
 				})
 
 				It("fails", func() {
-					err := container.NetOut("1.2.3.4/22", 456, "", garden.ProtocolAll, -1, -1, false)
+					err := container.NetOut(garden.TCPRule{
+						Network: "1.2.3.4/22",
+						Port:    456,
+						Log:     false,
+					})
 					Ω(err).Should(HaveOccurred())
 				})
 			})

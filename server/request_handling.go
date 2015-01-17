@@ -725,7 +725,7 @@ func validPortRange(portRange string) (garden.PortRange, bool) {
 			var startErr, endErr error
 			lo, startErr = strconv.Atoi(r[0])
 			hi, endErr = strconv.Atoi(r[1])
-			valid = startErr == nil && endErr == nil && lo > 0 && lo <= 65535 && hi > 0 && hi <= 65535
+			valid = startErr == nil && endErr == nil && lo > 0 && lo <= 65535 && hi > 0 && hi <= 65535 && lo <= hi
 		}
 	}
 	return garden.PortRange{uint32(lo), uint32(hi)}, valid
