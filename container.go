@@ -93,28 +93,62 @@ type Container interface {
 	// If the configuration directive deny_networks is not used,
 	// all networks are already whitelisted and this command is effectively a no-op.
 	//
-	// * network: Network to whitelist (in the form 1.2.3.4/8) or a range of IP
+	// * netOutRuler: one of the structures:
+	//
+	//    AllRule{
+	//       Network string
+	//       Log bool
+	//    }
+	//    TCPRule{
+	//       Network string
+	//       Port uint32
+	//       PortRange PortRange{ Start uint32; End uint32 }
+	//       Log bool
+	//    }
+	//    UDPRule{
+	//       Network   string
+	//       Port      uint32
+	//       PortRange PortRange{ Start uint32; End uint32 }
+	//    }
+	//    ICMPRule{
+	//       Network string
+	//       Type int32
+	//       Code int32
+	//    }
+	//    NetOutRule{
+	//       Network   string
+	//       Port      uint32
+	//       PortRange PortRange{ Start uint32; End uint32 }
+	//       Protocol  Protocol
+	//       IcmpType  int32
+	//       IcmpCode  int32
+	//       Log       bool
+	//    }
+	//
+	// all of which implement the interface method Rule() NetOutRule,
+	// and where:
+	//
+	// * Network: Network to whitelist (in the form 1.2.3.4/8) or a range of IP
 	//            addresses to whitelist (separated by -)
 	//
-	// * port: Port to whitelist.
+	// * Port: port to whitelist
 	//
-	// * portRange: Colon separated port range (in the form 8080:9080).
+	// * PortRange: range of ports to whitelist; Start to End inclusive
 	//
-	// * protocol : the protocol to be whitelisted (default TCP)
+	// * Protocol : the protocol to be whitelisted (default TCP)
 	//
-	// * icmpType: the ICMP type value to be whitelisted when protocol=ICMP (a
-	//             value of -1 means all types and is the default)
+	// * IcmpType/Type: the ICMP type value to be whitelisted when protocol=ICMP (a
+	//             value of -1 means all types)
 	//
-	// * icmpCode: the ICMP code value to be whitelisted when protocol=ICMP (a
-	//             value of -1 means all codes and is the default)
+	// * IcmpCode/Code: the ICMP code value to be whitelisted when protocol=ICMP (a
+	//             value of -1 means all codes)
 	//
-	// * log: Boolean specifying whether or not logging should be enabled.
+	// * Log: boolean specifying whether or not logging should be enabled, only
+	//        applies for protocol TCP.
 	//
 	// Errors:
 	// * None.
-	// NetOut(network string, port uint32, portRange string, protocol Protocol, icmpType int32, icmpCode int32, log bool) error
-
-	NetOut(NetOutRuler) error
+	NetOut(netOutRuler NetOutRuler) error
 
 	// Run a script inside a container.
 	//
