@@ -1,9 +1,6 @@
 package garden
 
-import (
-	"fmt"
-	"io"
-)
+import "io"
 
 //go:generate counterfeiter . Container
 
@@ -93,17 +90,17 @@ type Container interface {
 	// If the configuration directive deny_networks is not used,
 	// all networks are already whitelisted and this command is effectively a no-op.
 	//
-	// * netOutRuler: one of the structures:
+	// * netOutRuler: one of:
 	//
 	//    AllRule{
 	//       Network string
-	//       Log bool
+	//       Log     bool
 	//    }
 	//    TCPRule{
-	//       Network string
-	//       Port uint32
+	//       Network   string
+	//       Port      uint32
 	//       PortRange PortRange{ Start uint32; End uint32 }
-	//       Log bool
+	//       Log       bool
 	//    }
 	//    UDPRule{
 	//       Network   string
@@ -112,8 +109,8 @@ type Container interface {
 	//    }
 	//    ICMPRule{
 	//       Network string
-	//       Type int32
-	//       Code int32
+	//     [ Type    ICMPType(int32) ]  // default all ICMP types
+	//     [ Code    ICMPCode(int32) ]  // default all ICMP codes
 	//    }
 	//    NetOutRule{
 	//       Network   string
@@ -137,11 +134,17 @@ type Container interface {
 	//
 	// * Protocol : the protocol to be whitelisted (default TCP)
 	//
-	// * IcmpType/Type: the ICMP type value to be whitelisted when protocol=ICMP (a
-	//             value of -1 means all types); **the default is 0**
+	// * IcmpType: the ICMP type value to be whitelisted when protocol=ICMP (a
+	//             value of -1 means all types)
 	//
-	// * IcmpCode/Code: the ICMP code value to be whitelisted when protocol=ICMP (a
-	//             value of -1 means all codes); **the default is 0**
+	// * IcmpCode: the ICMP code value to be whitelisted when protocol=ICMP (a
+	//             value of -1 means all codes)
+	//
+	// * Type: (in ICMPRule only) the result of ICMPType(int32) used as IcmpType;
+	//         the default is -1, meaning all types
+	//
+	// * Code: (in ICMPRule only) the result of ICMPCode(int32) used as IcmpCode;
+	//         the default is -1, meaning all codes
 	//
 	// * Log: boolean specifying whether or not logging should be enabled, only
 	//        applies for protocol TCP.
@@ -184,8 +187,19 @@ type Container interface {
 	RemoveProperty(name string) error
 }
 
-type NetOutRuler interface {
-	Rule() NetOutRule
+type Protocol uint8
+
+const (
+	ProtocolTCP Protocol = 1 << iota
+	ProtocolUDP
+	ProtocolICMP
+
+	ProtocolAll Protocol = (1 << iota) - 1
+)
+
+type PortRange struct {
+	Start uint32
+	End   uint32
 }
 
 type NetOutRule struct {
@@ -196,18 +210,6 @@ type NetOutRule struct {
 	IcmpType  int32
 	IcmpCode  int32
 	Log       bool
-}
-
-type PortRange struct {
-	Start uint32
-	End   uint32
-}
-
-func (pr PortRange) String() string {
-	if pr.Start == 0 && pr.End == 0 {
-		return ""
-	}
-	return fmt.Sprintf("%d:%d", pr.Start, pr.End)
 }
 
 type AllRule struct {
@@ -221,17 +223,6 @@ type UDPRule struct {
 	PortRange PortRange
 }
 
-const (
-	ICMPAllTypes int32 = -1
-	ICMPAllCodes int32 = -1
-)
-
-type ICMPRule struct {
-	Network string
-	Type    int32
-	Code    int32
-}
-
 type TCPRule struct {
 	Network   string
 	Port      uint32
@@ -239,15 +230,11 @@ type TCPRule struct {
 	Log       bool
 }
 
-type Protocol uint8
-
-const (
-	ProtocolTCP Protocol = 1 << iota
-	ProtocolUDP
-	ProtocolICMP
-
-	ProtocolAll Protocol = (1 << iota) - 1
-)
+type ICMPRule struct {
+	Network string
+	Type    *iCMPType
+	Code    *iCMPCode
+}
 
 // ProcessSpec contains parameters for running a script inside a container.
 type ProcessSpec struct {
@@ -409,56 +396,4 @@ type ResourceLimits struct {
 	Rtprio     *uint64
 	Sigpending *uint64
 	Stack      *uint64
-}
-
-func (r NetOutRule) Rule() NetOutRule {
-	return r
-}
-
-func (r AllRule) Rule() NetOutRule {
-	return NetOutRule{
-		Network:   r.Network,
-		Port:      0,
-		PortRange: PortRange{},
-		Protocol:  ProtocolAll,
-		IcmpType:  ICMPAllTypes,
-		IcmpCode:  ICMPAllCodes,
-		Log:       r.Log,
-	}
-}
-
-func (r UDPRule) Rule() NetOutRule {
-	return NetOutRule{
-		Network:   r.Network,
-		Port:      r.Port,
-		PortRange: r.PortRange,
-		Protocol:  ProtocolUDP,
-		IcmpType:  ICMPAllTypes,
-		IcmpCode:  ICMPAllCodes,
-		Log:       false,
-	}
-}
-
-func (r ICMPRule) Rule() NetOutRule {
-	return NetOutRule{
-		Network:   r.Network,
-		Port:      0,
-		PortRange: PortRange{},
-		Protocol:  ProtocolICMP,
-		IcmpType:  r.Type,
-		IcmpCode:  r.Code,
-		Log:       false,
-	}
-}
-
-func (r TCPRule) Rule() NetOutRule {
-	return NetOutRule{
-		Network:   r.Network,
-		Port:      r.Port,
-		PortRange: r.PortRange,
-		Protocol:  ProtocolTCP,
-		IcmpType:  ICMPAllTypes,
-		IcmpCode:  ICMPAllCodes,
-		Log:       r.Log,
-	}
 }

@@ -566,8 +566,8 @@ var _ = Describe("Connection", func() {
 		BeforeEach(func() {
 			handle = "foo-handle"
 			network = "foo-network"
-			icmpType = garden.ICMPAllTypes
-			icmpCode = garden.ICMPAllCodes
+			icmpType = -1
+			icmpCode = -1
 			logging = false
 		})
 
@@ -610,8 +610,8 @@ var _ = Describe("Connection", func() {
 						Network:  "foo-network",
 						Port:     42,
 						Protocol: 58,
-						IcmpType: garden.ICMPAllTypes,
-						IcmpCode: garden.ICMPAllCodes,
+						IcmpType: -1,
+						IcmpCode: -1,
 						Log:      false,
 					})
 				Ω(err).Should(MatchError("invalid protocol"))
@@ -653,7 +653,7 @@ var _ = Describe("Connection", func() {
 			})
 		})
 
-		Context("with ICMP protocol", func() {
+		Context("with specific ICMP protocol", func() {
 			BeforeEach(func() {
 				port = 0
 				portRange = ""
@@ -666,8 +666,26 @@ var _ = Describe("Connection", func() {
 				err := connection.NetOut("foo-handle",
 					garden.ICMPRule{
 						Network: "foo-network",
-						Type:    3,
-						Code:    2,
+						Type:    garden.ICMPType(3),
+						Code:    garden.ICMPCode(2),
+					})
+				Ω(err).ShouldNot(HaveOccurred())
+			})
+		})
+
+		Context("with default ICMP protocol", func() {
+			BeforeEach(func() {
+				port = 0
+				portRange = ""
+				protoc = protocol.NetOutRequest_ICMP
+				icmpType = -1
+				icmpCode = -1
+			})
+
+			It("should send the correct values", func() {
+				err := connection.NetOut("foo-handle",
+					garden.ICMPRule{
+						Network: "foo-network",
 					})
 				Ω(err).ShouldNot(HaveOccurred())
 			})

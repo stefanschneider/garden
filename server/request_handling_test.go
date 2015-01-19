@@ -1056,11 +1056,11 @@ var _ = Describe("When a client connects", func() {
 				Ω(rule.Log).Should(Equal(false))
 			})
 
-			It("permits ICMP traffic outside of the container", func() {
+			It("permits specific ICMP traffic outside of the container", func() {
 				err := container.NetOut(garden.ICMPRule{
 					Network: "1.2.3.4/22",
-					Type:    4,
-					Code:    7,
+					Type:    garden.ICMPType(4),
+					Code:    garden.ICMPCode(7),
 				})
 				Ω(err).ShouldNot(HaveOccurred())
 
@@ -1073,6 +1073,24 @@ var _ = Describe("When a client connects", func() {
 				Ω(rule.Protocol).Should(Equal(garden.ProtocolICMP))
 				Ω(rule.IcmpType).Should(Equal(int32(4)))
 				Ω(rule.IcmpCode).Should(Equal(int32(7)))
+				Ω(rule.Log).Should(Equal(false))
+			})
+
+			It("permits default (all) ICMP traffic outside of the container", func() {
+				err := container.NetOut(garden.ICMPRule{
+					Network: "1.2.3.4/22",
+				})
+				Ω(err).ShouldNot(HaveOccurred())
+
+				ruler := fakeContainer.NetOutArgsForCall(0)
+				rule := ruler.Rule()
+
+				Ω(rule.Network).Should(Equal("1.2.3.4/22"))
+				Ω(rule.Port).Should(Equal(uint32(0)))
+				Ω(rule.PortRange).Should(Equal(garden.PortRange{}))
+				Ω(rule.Protocol).Should(Equal(garden.ProtocolICMP))
+				Ω(rule.IcmpType).Should(Equal(int32(-1)))
+				Ω(rule.IcmpCode).Should(Equal(int32(-1)))
 				Ω(rule.Log).Should(Equal(false))
 			})
 
