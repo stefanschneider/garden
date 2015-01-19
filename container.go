@@ -109,8 +109,8 @@ type Container interface {
 	//    }
 	//    ICMPRule{
 	//       Network string
-	//     [ Type    ICMPType(int32) ]  // default all ICMP types
-	//     [ Code    ICMPCode(int32) ]  // default all ICMP codes
+	//       Type    ICMPType(int32)    // default all ICMP types
+	//       Code    ICMPCode(int32)    // default all ICMP codes
 	//    }
 	//    NetOutRule{
 	//       Network   string
