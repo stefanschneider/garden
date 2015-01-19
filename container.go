@@ -138,10 +138,10 @@ type Container interface {
 	// * Protocol : the protocol to be whitelisted (default TCP)
 	//
 	// * IcmpType/Type: the ICMP type value to be whitelisted when protocol=ICMP (a
-	//             value of -1 means all types)
+	//             value of -1 means all types); **the default is 0**
 	//
 	// * IcmpCode/Code: the ICMP code value to be whitelisted when protocol=ICMP (a
-	//             value of -1 means all codes)
+	//             value of -1 means all codes); **the default is 0**
 	//
 	// * Log: boolean specifying whether or not logging should be enabled, only
 	//        applies for protocol TCP.
@@ -220,6 +220,11 @@ type UDPRule struct {
 	Port      uint32
 	PortRange PortRange
 }
+
+const (
+	ICMPAllTypes int32 = -1
+	ICMPAllCodes int32 = -1
+)
 
 type ICMPRule struct {
 	Network string
@@ -416,8 +421,8 @@ func (r AllRule) Rule() NetOutRule {
 		Port:      0,
 		PortRange: PortRange{},
 		Protocol:  ProtocolAll,
-		IcmpType:  -1,
-		IcmpCode:  -1,
+		IcmpType:  ICMPAllTypes,
+		IcmpCode:  ICMPAllCodes,
 		Log:       r.Log,
 	}
 }
@@ -428,8 +433,8 @@ func (r UDPRule) Rule() NetOutRule {
 		Port:      r.Port,
 		PortRange: r.PortRange,
 		Protocol:  ProtocolUDP,
-		IcmpType:  -1,
-		IcmpCode:  -1,
+		IcmpType:  ICMPAllTypes,
+		IcmpCode:  ICMPAllCodes,
 		Log:       false,
 	}
 }
@@ -452,8 +457,8 @@ func (r TCPRule) Rule() NetOutRule {
 		Port:      r.Port,
 		PortRange: r.PortRange,
 		Protocol:  ProtocolTCP,
-		IcmpType:  -1,
-		IcmpCode:  -1,
+		IcmpType:  ICMPAllTypes,
+		IcmpCode:  ICMPAllCodes,
 		Log:       r.Log,
 	}
 }

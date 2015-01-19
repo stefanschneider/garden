@@ -566,8 +566,8 @@ var _ = Describe("Connection", func() {
 		BeforeEach(func() {
 			handle = "foo-handle"
 			network = "foo-network"
-			icmpType = -1
-			icmpCode = -1
+			icmpType = garden.ICMPAllTypes
+			icmpCode = garden.ICMPAllCodes
 			logging = false
 		})
 
@@ -610,8 +610,8 @@ var _ = Describe("Connection", func() {
 						Network:  "foo-network",
 						Port:     42,
 						Protocol: 58,
-						IcmpType: -1,
-						IcmpCode: -1,
+						IcmpType: garden.ICMPAllTypes,
+						IcmpCode: garden.ICMPAllCodes,
 						Log:      false,
 					})
 				Ω(err).Should(MatchError("invalid protocol"))
