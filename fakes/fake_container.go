@@ -119,10 +119,10 @@ type FakeContainer struct {
 		result2 uint32
 		result3 error
 	}
-	NetOutStub        func(garden.NetOutRuler) error
+	NetOutStub        func(netOutRuler garden.NetOutRuler) error
 	netOutMutex       sync.RWMutex
 	netOutArgsForCall []struct {
-		arg1 garden.NetOutRuler
+		netOutRuler garden.NetOutRuler
 	}
 	netOutReturns struct {
 		result1 error
@@ -585,14 +585,14 @@ func (fake *FakeContainer) NetInReturns(result1 uint32, result2 uint32, result3 
 	}{result1, result2, result3}
 }
 
-func (fake *FakeContainer) NetOut(arg1 garden.NetOutRuler) error {
+func (fake *FakeContainer) NetOut(netOutRuler garden.NetOutRuler) error {
 	fake.netOutMutex.Lock()
 	fake.netOutArgsForCall = append(fake.netOutArgsForCall, struct {
-		arg1 garden.NetOutRuler
-	}{arg1})
+		netOutRuler garden.NetOutRuler
+	}{netOutRuler})
 	fake.netOutMutex.Unlock()
 	if fake.NetOutStub != nil {
-		return fake.NetOutStub(arg1)
+		return fake.NetOutStub(netOutRuler)
 	} else {
 		return fake.netOutReturns.result1
 	}
@@ -607,7 +607,7 @@ func (fake *FakeContainer) NetOutCallCount() int {
 func (fake *FakeContainer) NetOutArgsForCall(i int) garden.NetOutRuler {
 	fake.netOutMutex.RLock()
 	defer fake.netOutMutex.RUnlock()
-	return fake.netOutArgsForCall[i].arg1
+	return fake.netOutArgsForCall[i].netOutRuler
 }
 
 func (fake *FakeContainer) NetOutReturns(result1 error) {

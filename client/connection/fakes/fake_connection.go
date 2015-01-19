@@ -197,11 +197,11 @@ type FakeConnection struct {
 		result2 uint32
 		result3 error
 	}
-	NetOutStub        func(handle string, netOutRuler garden.NetOutRuler) error
+	NetOutStub        func(handle string, rule garden.NetOutRule) error
 	netOutMutex       sync.RWMutex
 	netOutArgsForCall []struct {
-		handle      string
-		netOutRuler garden.NetOutRuler
+		handle string
+		rule   garden.NetOutRule
 	}
 	netOutReturns struct {
 		result1 error
@@ -892,15 +892,15 @@ func (fake *FakeConnection) NetInReturns(result1 uint32, result2 uint32, result3
 	}{result1, result2, result3}
 }
 
-func (fake *FakeConnection) NetOut(handle string, netOutRuler garden.NetOutRuler) error {
+func (fake *FakeConnection) NetOut(handle string, rule garden.NetOutRule) error {
 	fake.netOutMutex.Lock()
 	fake.netOutArgsForCall = append(fake.netOutArgsForCall, struct {
-		handle      string
-		netOutRuler garden.NetOutRuler
-	}{handle, netOutRuler})
+		handle string
+		rule   garden.NetOutRule
+	}{handle, rule})
 	fake.netOutMutex.Unlock()
 	if fake.NetOutStub != nil {
-		return fake.NetOutStub(handle, netOutRuler)
+		return fake.NetOutStub(handle, rule)
 	} else {
 		return fake.netOutReturns.result1
 	}
@@ -912,10 +912,10 @@ func (fake *FakeConnection) NetOutCallCount() int {
 	return len(fake.netOutArgsForCall)
 }
 
-func (fake *FakeConnection) NetOutArgsForCall(i int) (string, garden.NetOutRuler) {
+func (fake *FakeConnection) NetOutArgsForCall(i int) (string, garden.NetOutRule) {
 	fake.netOutMutex.RLock()
 	defer fake.netOutMutex.RUnlock()
-	return fake.netOutArgsForCall[i].handle, fake.netOutArgsForCall[i].netOutRuler
+	return fake.netOutArgsForCall[i].handle, fake.netOutArgsForCall[i].rule
 }
 
 func (fake *FakeConnection) NetOutReturns(result1 error) {

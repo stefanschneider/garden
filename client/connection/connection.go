@@ -62,7 +62,7 @@ type Connection interface {
 	Attach(handle string, processID uint32, io garden.ProcessIO) (garden.Process, error)
 
 	NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error)
-	NetOut(handle string, netOutRuler garden.NetOutRuler) error
+	NetOut(handle string, rule garden.NetOutRule) error
 
 	GetProperty(handle string, name string) (string, error)
 	SetProperty(handle string, name string, value string) error
@@ -365,9 +365,7 @@ func (c *connection) NetIn(handle string, hostPort, containerPort uint32) (uint3
 	return res.GetHostPort(), res.GetContainerPort(), nil
 }
 
-func (c *connection) NetOut(handle string, netOutRuler garden.NetOutRuler) error {
-
-	rule := netOutRuler.Rule()
+func (c *connection) NetOut(handle string, rule garden.NetOutRule) error {
 
 	var np protocol.NetOutRequest_Protocol
 

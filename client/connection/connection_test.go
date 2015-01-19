@@ -584,7 +584,7 @@ var _ = Describe("Connection", func() {
 						Network: "foo-network",
 						Port:    42,
 						Log:     false,
-					})
+					}.Rule())
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 
@@ -599,7 +599,7 @@ var _ = Describe("Connection", func() {
 							Network: "foo-network",
 							Port:    42,
 							Log:     logging,
-						})
+						}.Rule())
 					Ω(err).ShouldNot(HaveOccurred())
 				})
 			})
@@ -630,7 +630,7 @@ var _ = Describe("Connection", func() {
 					garden.UDPRule{
 						Network:   "foo-network",
 						PortRange: garden.PortRange{8080, 8081},
-					})
+					}.Rule())
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
@@ -648,7 +648,7 @@ var _ = Describe("Connection", func() {
 						Network:   "foo-network",
 						Port:      42,
 						PortRange: garden.PortRange{8080, 8081},
-					})
+					}.Rule())
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
@@ -668,7 +668,7 @@ var _ = Describe("Connection", func() {
 						Network: "foo-network",
 						Type:    garden.ICMPType(3),
 						Code:    garden.ICMPCode(2),
-					})
+					}.Rule())
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
@@ -686,7 +686,7 @@ var _ = Describe("Connection", func() {
 				err := connection.NetOut("foo-handle",
 					garden.ICMPRule{
 						Network: "foo-network",
-					})
+					}.Rule())
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})

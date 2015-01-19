@@ -106,7 +106,7 @@ func (container *container) NetIn(hostPort, containerPort uint32) (uint32, uint3
 }
 
 func (container *container) NetOut(netOutRuler garden.NetOutRuler) error {
-	return container.connection.NetOut(container.handle, netOutRuler)
+	return container.connection.NetOut(container.handle, netOutRuler.Rule())
 }
 
 func (container *container) GetProperty(name string) (string, error) {
