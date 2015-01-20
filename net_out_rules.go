@@ -1,9 +1,18 @@
 package garden
 
-import "fmt"
+import (
+	"fmt"
+	"net"
+)
 
-type NetOutRuler interface {
-	Rule() NetOutRule
+func lastIP(n net.IPNet) net.IP {
+	mask := n.Mask
+	ip := n.IP
+	lastip := make(net.IP, length(ip))
+	for i, m := range mask {
+		lastip[i] = (^mask[i]) | ip[i]
+	}
+	return lastip
 }
 
 func (pr PortRange) String() string {

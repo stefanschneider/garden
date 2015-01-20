@@ -1,6 +1,9 @@
 package garden
 
-import "io"
+import (
+	"io"
+	"net"
+)
 
 //go:generate counterfeiter . Container
 
@@ -151,7 +154,7 @@ type Container interface {
 	//
 	// Errors:
 	// * None.
-	NetOut(netOutRuler NetOutRuler) error
+	NetOut(netOutRule NetOutRule) error
 
 	// Run a script inside a container.
 	//
@@ -197,19 +200,81 @@ const (
 	ProtocolAll Protocol = (1 << iota) - 1
 )
 
-type PortRange struct {
-	Start uint32
-	End   uint32
+type NetworkInfo struct {
+	Start net.IP
+	End   net.IP
+}
+
+func AllNetworks() NetworkInfo {
+	return IPRange(net.ParseIP("0.0.0.0"), net.ParseIP("255.255.255.255"))
+}
+
+func IPRange(start, end net.IP) NetworkInfo {
+	return NetworkInfo{
+		Start: start,
+		End:   end,
+	}
+}
+
+func IP(ip net.IP) NetworkInfo {
+	return IPRange(ip, ip)
+}
+
+func CidrNetwork(ipNet net.IPNet) {
+	return IPRange(ipNet.IP, lastIP(ipNet))
+}
+
+type Ports struct {
+	Start uint16
+	End   uint16
+}
+
+func AllPorts() *Ports {
+	return Port(0)
+}
+
+func Port(port uint16) *Ports {
+	return PortRange(port, port)
+}
+
+func PortRange(start, end uint16) *Ports {
+	return &Ports{
+		Start: start,
+		End:   end,
+	}
+}
+
+type ICMPCtrl struct {
+	Type *uint8
+	Code *uint8
+}
+
+func AllICMP() *ICMPCtrl {
+	return &ICMPCtrl{}
+}
+
+func TypeICMP(iType uint8) *ICMPCtrl {
+	pType := iType
+	return &ICMPCtrl{
+		Type: &pType,
+		Code: nil,
+	}
+}
+
+func ICMPControl(iType, iCode uint8) *ICMPCtrl {
+	pType, pCode := iType, iCode
+	return &ICMPCtrl{
+		Type: &pType,
+		Code: &pCode,
+	}
 }
 
 type NetOutRule struct {
-	Network   string
-	Port      uint32
-	PortRange PortRange
-	Protocol  Protocol
-	IcmpType  int32
-	IcmpCode  int32
-	Log       bool
+	Protocol Protocol
+	Network  NetworkInfo
+	Port     *Ports
+	IcmpInfo *ICMPCtrl
+	Log      bool
 }
 
 type AllRule struct {
@@ -220,13 +285,13 @@ type AllRule struct {
 type UDPRule struct {
 	Network   string
 	Port      uint32
-	PortRange PortRange
+	PortRange Ports
 }
 
 type TCPRule struct {
 	Network   string
 	Port      uint32
-	PortRange PortRange
+	PortRange Ports
 	Log       bool
 }
 
