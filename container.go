@@ -93,64 +93,14 @@ type Container interface {
 	// If the configuration directive deny_networks is not used,
 	// all networks are already whitelisted and this command is effectively a no-op.
 	//
-	// * netOutRuler: one of:
-	//
-	//    AllRule{
-	//       Network string
-	//       Log     bool
-	//    }
-	//    TCPRule{
-	//       Network   string
-	//       Port      uint32
-	//       PortRange PortRange{ Start uint32; End uint32 }
-	//       Log       bool
-	//    }
-	//    UDPRule{
-	//       Network   string
-	//       Port      uint32
-	//       PortRange PortRange{ Start uint32; End uint32 }
-	//    }
-	//    ICMPRule{
-	//       Network string
-	//       Type    ICMPType(int32)    // default all ICMP types
-	//       Code    ICMPCode(int32)    // default all ICMP codes
-	//    }
-	//    NetOutRule{
-	//       Network   string
-	//       Port      uint32
-	//       PortRange PortRange{ Start uint32; End uint32 }
-	//       Protocol  Protocol
-	//       IcmpType  int32
-	//       IcmpCode  int32
-	//       Log       bool
-	//    }
-	//
-	// all of which implement the interface method Rule() NetOutRule,
-	// and where:
-	//
-	// * Network: Network to whitelist (in the form 1.2.3.4/8) or a range of IP
-	//            addresses to whitelist (separated by -)
-	//
-	// * Port: port to whitelist
-	//
-	// * PortRange: range of ports to whitelist; Start to End inclusive
-	//
-	// * Protocol : the protocol to be whitelisted (default TCP)
-	//
-	// * IcmpType: the ICMP type value to be whitelisted when protocol=ICMP (a
-	//             value of -1 means all types)
-	//
-	// * IcmpCode: the ICMP code value to be whitelisted when protocol=ICMP (a
-	//             value of -1 means all codes)
-	//
-	// * Type: (in ICMPRule only) the result of ICMPType(int32) used as IcmpType;
-	//         the default is -1, meaning all types
-	//
-	// * Code: (in ICMPRule only) the result of ICMPCode(int32) used as IcmpCode;
-	//         the default is -1, meaning all codes
-	//
-	// * Log: boolean specifying whether or not logging should be enabled, only
-	//        applies for protocol TCP.
+	// A NetOutRule is a structure with fields:
+	// {
+	//     Protocol  Protocol         // the protocol to be whitelisted (default TCP)
+	//     Network   *NetworkInterval // a range of network addresses to whitelist; Start to End inclusive; default all
+	//     Ports     *PortInterval    // a range of ports to whitelist; Start to End inclusive; ignored if Protocol is ICMP
+	//     Icmps     *ICMPControl     // specifying which ICMP codes to whitelist; ignored if Protocol is not ICMP
+	//     Log       bool             // if true, logging is enabled; ignored if Protocol is not TCP or All
+	// }
 	//
 	// Errors:
 	// * None.
@@ -190,115 +140,36 @@ type Container interface {
 	RemoveProperty(name string) error
 }
 
+type NetOutRule struct {
+	Protocol Protocol
+	Network  *NetworkInterval
+	Ports    *PortInterval
+	Icmps    *ICMPControl
+	Log      bool
+}
+
 type Protocol uint8
 
 const (
 	ProtocolTCP Protocol = 1 << iota
 	ProtocolUDP
 	ProtocolICMP
-
 	ProtocolAll Protocol = (1 << iota) - 1
 )
 
-type NetworkInfo struct {
+type NetworkInterval struct {
 	Start net.IP
 	End   net.IP
 }
 
-func AllNetworks() NetworkInfo {
-	return IPRange(net.ParseIP("0.0.0.0"), net.ParseIP("255.255.255.255"))
-}
-
-func IPRange(start, end net.IP) NetworkInfo {
-	return NetworkInfo{
-		Start: start,
-		End:   end,
-	}
-}
-
-func IP(ip net.IP) NetworkInfo {
-	return IPRange(ip, ip)
-}
-
-func CidrNetwork(ipNet net.IPNet) {
-	return IPRange(ipNet.IP, lastIP(ipNet))
-}
-
-type Ports struct {
+type PortInterval struct {
 	Start uint16
 	End   uint16
 }
 
-func AllPorts() *Ports {
-	return Port(0)
-}
-
-func Port(port uint16) *Ports {
-	return PortRange(port, port)
-}
-
-func PortRange(start, end uint16) *Ports {
-	return &Ports{
-		Start: start,
-		End:   end,
-	}
-}
-
-type ICMPCtrl struct {
-	Type *uint8
+type ICMPControl struct {
+	Type uint8
 	Code *uint8
-}
-
-func AllICMP() *ICMPCtrl {
-	return &ICMPCtrl{}
-}
-
-func TypeICMP(iType uint8) *ICMPCtrl {
-	pType := iType
-	return &ICMPCtrl{
-		Type: &pType,
-		Code: nil,
-	}
-}
-
-func ICMPControl(iType, iCode uint8) *ICMPCtrl {
-	pType, pCode := iType, iCode
-	return &ICMPCtrl{
-		Type: &pType,
-		Code: &pCode,
-	}
-}
-
-type NetOutRule struct {
-	Protocol Protocol
-	Network  NetworkInfo
-	Port     *Ports
-	IcmpInfo *ICMPCtrl
-	Log      bool
-}
-
-type AllRule struct {
-	Network string
-	Log     bool
-}
-
-type UDPRule struct {
-	Network   string
-	Port      uint32
-	PortRange Ports
-}
-
-type TCPRule struct {
-	Network   string
-	Port      uint32
-	PortRange Ports
-	Log       bool
-}
-
-type ICMPRule struct {
-	Network string
-	Type    *iCMPType
-	Code    *iCMPCode
 }
 
 // ProcessSpec contains parameters for running a script inside a container.
