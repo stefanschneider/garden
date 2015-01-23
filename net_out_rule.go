@@ -2,78 +2,64 @@ package garden
 
 import "net"
 
-// Helper functions for constructing NetOutRule structure fields
-
-// AllNetworks is a NetworkInterval helper function
-func AllNetworks() *NetworkInterval {
-	return nil
+type NetOutRule struct {
+	Protocol Protocol     // the protocol to be whitelisted; default TCP
+	Network  *IPRange     // a range of IP addresses to whitelist; Start to End inclusive; default all
+	Ports    *PortRange   // a range of ports to whitelist; Start to End inclusive; ignored if Protocol is ICMP; default all
+	ICMPs    *ICMPControl // specifying which ICMP codes to whitelist; ignored if Protocol is not ICMP; default all
+	Log      bool         // if true, logging is enabled; ignored if Protocol is not TCP or All; default false
 }
 
-// AllIPv4Networks is a NetworkInterval helper function
-func AllIPv4Networks() *NetworkInterval {
-	return IPRange(net.ParseIP("0.0.0.0"), net.ParseIP("255.255.255.255"))
+type Protocol uint8
+
+const (
+	ProtocolTCP Protocol = iota
+	ProtocolUDP
+	ProtocolICMP
+	ProtocolAll
+)
+
+type IPRange struct {
+	Start net.IP
+	End   net.IP
 }
 
-// IPRange is a NetworkInterval helper function
-func IPRange(start, end net.IP) *NetworkInterval {
-	return &NetworkInterval{
-		Start: start,
-		End:   end,
-	}
+type PortRange struct {
+	Start uint16
+	End   uint16
 }
 
-// SingleIP is a NetworkInterval helper function
-func SingleIP(ip net.IP) *NetworkInterval {
-	return IPRange(ip, ip)
+type ICMPType uint8
+type ICMPCode uint8
+
+type ICMPControl struct {
+	Type ICMPType
+	Code *ICMPCode
 }
 
-// IPNetNetwork is a NetworkInterval helper function
-func IPNetNetwork(ipNet net.IPNet) *NetworkInterval {
-	return IPRange(ipNet.IP, lastIP(ipNet))
+// IPRangeFromIP creates an IPRange containing a single IP
+func IPRangeFromIP(ip net.IP) *IPRange {
+	return &IPRange{Start: ip, End: ip}
 }
 
-// AllPorts is a PortInterval helper function
-func AllPorts() *PortInterval {
-	return nil
+// IPRangeFromIPNet creates an IPRange containing the same IPs as a given IPNet
+func IPRangeFromIPNet(ipNet *net.IPNet) *IPRange {
+	return &IPRange{Start: ipNet.IP, End: lastIP(ipNet)}
 }
 
-// SinglePort is a PortInterval helper function
-func SinglePort(port uint16) *PortInterval {
-	return PortRange(port, port)
+// PortRangeFromPort creates a PortRange containing a single port
+func PortRangeFromPort(port uint16) *PortRange {
+	return &PortRange{Start: port, End: port}
 }
 
-// PortRange is a PortInterval helper function
-func PortRange(start, end uint16) *PortInterval {
-	return &PortInterval{
-		Start: start,
-		End:   end,
-	}
-}
-
-// AllICMPs is a ICMPControl helper function
-func AllICMPs() *ICMPControl {
-	return nil
-}
-
-// AllICMPsOfType is a ICMPControl helper function
-func AllICMPsOfType(iType uint8) *ICMPControl {
-	return &ICMPControl{
-		Type: iType,
-		Code: nil,
-	}
-}
-
-// ICMPTypeAndCode is a ICMPControl helper function
-func ICMPTypeAndCode(iType, iCode uint8) *ICMPControl {
-	pCode := iCode
-	return &ICMPControl{
-		Type: iType,
-		Code: &pCode,
-	}
+// ICMPControlCode creates a value for the Code field in ICMPControl
+func ICMPControlCode(code uint8) *ICMPCode {
+	pCode := ICMPCode(code)
+	return &pCode
 }
 
 // Last IP (broadcast) address in a network (net.IPNet)
-func lastIP(n net.IPNet) net.IP {
+func lastIP(n *net.IPNet) net.IP {
 	mask := n.Mask
 	ip := n.IP
 	lastip := make(net.IP, len(ip))

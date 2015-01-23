@@ -382,17 +382,41 @@ func (c *connection) NetOut(handle string, rule garden.NetOutRule) error {
 		return errors.New("invalid protocol")
 	}
 
+	var network *protocol.NetOutRequest_IPRange
+	if rule.Network != nil {
+		network = &protocol.NetOutRequest_IPRange{
+			Start: proto.String(rule.Network.Start.String()),
+			End:   proto.String(rule.Network.End.String()),
+		}
+	}
+
+	var ports *protocol.NetOutRequest_PortRange
+	if rule.Ports != nil {
+		ports = &protocol.NetOutRequest_PortRange{
+			Start: proto.Uint32(uint32(rule.Ports.Start)),
+			End:   proto.Uint32(uint32(rule.Ports.End)),
+		}
+	}
+
+	var icmps *protocol.NetOutRequest_ICMPControl
+	if rule.ICMPs != nil {
+		icmps = &protocol.NetOutRequest_ICMPControl{
+			Type: proto.Uint32(uint32(rule.ICMPs.Type)),
+		}
+		if rule.ICMPs.Code != nil {
+			icmps.Code = proto.Int32(int32(*rule.ICMPs.Code))
+		}
+	}
+
 	return c.do(
 		routes.NetOut,
 		&protocol.NetOutRequest{
-			Handle:    proto.String(handle),
-			Network:   proto.String(netIntervalToString(rule.Network)),
-			Port:      proto.Uint32(portIntervalToInt(rule.Ports)),
-			PortRange: proto.String(portIntervalToString(rule.Ports)),
-			Log:       proto.Bool(rule.Log),
-			Protocol:  &np,
-			IcmpType:  proto.Int32(rule.IcmpType),
-			IcmpCode:  proto.Int32(rule.IcmpCode),
+			Handle:   proto.String(handle),
+			Protocol: &np,
+			Network:  network,
+			Ports:    ports,
+			Icmps:    icmps,
+			Log:      proto.Bool(rule.Log),
 		},
 		&protocol.NetOutResponse{},
 		rata.Params{
@@ -400,38 +424,6 @@ func (c *connection) NetOut(handle string, rule garden.NetOutRule) error {
 		},
 		nil,
 	)
-}
-
-func netIntervalToString(ni garden.NetworkInterval) string {
-	if cidrVal, isCidr := ipv4Cidr(ni); isCidr {
-		return ni.Start.String() + "/" + fmt.Sprintf("%d", cidrVal)
-	}
-	if ni.Start.Equal(ni.End) {
-		return ni.Start.String()
-	}
-	return ni.Start.String() + "-" + ni.End.String()
-}
-
-func ipv4Cidr(ni garden.NetworkInterval) (int, bool) {
-	net.IP.Mask
-	if len(ni.Start.Mask()) == 4 {
-
-	}
-	return 0, false
-}
-
-func portIntervalToInt(pi *garden.PortInterval) uint32 {
-	if pi == nil || pi.Start != pi.End {
-		return 0
-	}
-	return uint32(pi.Start)
-}
-
-func portIntervalToString(pi *garden.PortInterval) string {
-	if pi == nil {
-		return ""
-	}
-	return fmt.Sprintf("%d", pi.Start) + ":" + fmt.Sprintf("%d", pi.End)
 }
 
 func (c *connection) GetProperty(handle string, name string) (string, error) {

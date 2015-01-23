@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"path"
 	"sync"
@@ -1020,195 +1021,129 @@ var _ = Describe("When a client connects", func() {
 		})
 
 		Describe("net out", func() {
-			It("permits traffic outside of the container with port specified", func() {
-				err := container.NetOut(garden.TCPRule{
-					Network: "1.2.3.4/22",
-					Port:    456,
-					Log:     false,
+			Context("when a zero-value NetOutRule is supplied", func() {
+				It("permits all TCP traffic to everywhere, with logging not enabled", func() {
+					Ω(container.NetOut(garden.NetOutRule{})).Should(Succeed())
+					rule := fakeContainer.NetOutArgsForCall(0)
+
+					Ω(rule.Protocol).Should(Equal(garden.ProtocolTCP))
+					Ω(rule.Network).Should(BeNil())
+					Ω(rule.Ports).Should(BeNil())
+					Ω(rule.ICMPs).Should(BeNil())
+					Ω(rule.Log).Should(Equal(false))
 				})
-				Ω(err).ShouldNot(HaveOccurred())
-
-				ruler := fakeContainer.NetOutArgsForCall(0)
-				rule := ruler.Rule()
-
-				Ω(rule.Network).Should(Equal("1.2.3.4/22"))
-				Ω(rule.Port).Should(Equal(uint32(456)))
-				Ω(rule.PortRange).Should(Equal(garden.PortRange{}))
-				Ω(rule.Protocol).Should(Equal(garden.ProtocolTCP))
-				Ω(rule.Log).Should(Equal(false))
 			})
 
-			It("permits traffic outside of the container with port range specified", func() {
-				err := container.NetOut(garden.TCPRule{
-					Network:   "1.2.3.4/22",
-					PortRange: garden.PortRange{80, 81},
-					Log:       false,
+			Context("when protocol is specified", func() {
+				Context("as TCP", func() {
+					It("permits TCP traffic", func() {
+						Ω(container.NetOut(garden.NetOutRule{
+							Protocol: garden.ProtocolTCP,
+						})).Should(Succeed())
+						rule := fakeContainer.NetOutArgsForCall(0)
+						Ω(rule.Protocol).Should(Equal(garden.ProtocolTCP))
+					})
 				})
-				Ω(err).ShouldNot(HaveOccurred())
 
-				ruler := fakeContainer.NetOutArgsForCall(0)
-				rule := ruler.Rule()
+				Context("as UDP", func() {
+					It("permits UDP traffic", func() {
+						Ω(container.NetOut(garden.NetOutRule{
+							Protocol: garden.ProtocolUDP,
+						})).Should(Succeed())
+						rule := fakeContainer.NetOutArgsForCall(0)
+						Ω(rule.Protocol).Should(Equal(garden.ProtocolUDP))
+					})
+				})
 
-				Ω(rule.Network).Should(Equal("1.2.3.4/22"))
-				Ω(rule.Port).Should(Equal(uint32(0)))
-				Ω(rule.PortRange).Should(Equal(garden.PortRange{80, 81}))
-				Ω(rule.Protocol).Should(Equal(garden.ProtocolTCP))
-				Ω(rule.Log).Should(Equal(false))
+				Context("as ICMP", func() {
+					It("permits ICMP traffic", func() {
+						Ω(container.NetOut(garden.NetOutRule{
+							Protocol: garden.ProtocolICMP,
+						})).Should(Succeed())
+						rule := fakeContainer.NetOutArgsForCall(0)
+						Ω(rule.Protocol).Should(Equal(garden.ProtocolICMP))
+					})
+				})
+
+				Context("as ALL", func() {
+					It("permits ALL traffic", func() {
+						Ω(container.NetOut(garden.NetOutRule{
+							Protocol: garden.ProtocolAll,
+						})).Should(Succeed())
+
+						rule := fakeContainer.NetOutArgsForCall(0)
+						Ω(rule.Protocol).Should(Equal(garden.ProtocolAll))
+					})
+				})
 			})
 
-			It("permits specific ICMP traffic outside of the container", func() {
-				err := container.NetOut(garden.ICMPRule{
-					Network: "1.2.3.4/22",
-					Type:    garden.ICMPType(4),
-					Code:    garden.ICMPCode(7),
+			Context("when network is specified", func() {
+				It("permits traffic to that network", func() {
+					Ω(container.NetOut(garden.NetOutRule{
+						Network: &garden.IPRange{net.ParseIP("1.3.5.7"), net.ParseIP("9.9.7.6")},
+					})).Should(Succeed())
+
+					rule := fakeContainer.NetOutArgsForCall(0)
+					Ω(rule.Network).Should(Equal(&garden.IPRange{
+						Start: net.ParseIP("1.3.5.7"),
+						End:   net.ParseIP("9.9.7.6"),
+					}))
 				})
-				Ω(err).ShouldNot(HaveOccurred())
-
-				ruler := fakeContainer.NetOutArgsForCall(0)
-				rule := ruler.Rule()
-
-				Ω(rule.Network).Should(Equal("1.2.3.4/22"))
-				Ω(rule.Port).Should(Equal(uint32(0)))
-				Ω(rule.PortRange).Should(Equal(garden.PortRange{}))
-				Ω(rule.Protocol).Should(Equal(garden.ProtocolICMP))
-				Ω(rule.IcmpType).Should(Equal(int32(4)))
-				Ω(rule.IcmpCode).Should(Equal(int32(7)))
-				Ω(rule.Log).Should(Equal(false))
 			})
 
-			It("permits default (all) ICMP traffic outside of the container", func() {
-				err := container.NetOut(garden.ICMPRule{
-					Network: "1.2.3.4/22",
+			Context("when ports are specified", func() {
+				It("permits traffic to those ports", func() {
+					Ω(container.NetOut(garden.NetOutRule{
+						Ports: &garden.PortRange{4, 44},
+					})).Should(Succeed())
+
+					rule := fakeContainer.NetOutArgsForCall(0)
+					Ω(rule.Ports).Should(Equal(&garden.PortRange{
+						Start: 4,
+						End:   44,
+					}))
 				})
-				Ω(err).ShouldNot(HaveOccurred())
-
-				ruler := fakeContainer.NetOutArgsForCall(0)
-				rule := ruler.Rule()
-
-				Ω(rule.Network).Should(Equal("1.2.3.4/22"))
-				Ω(rule.Port).Should(Equal(uint32(0)))
-				Ω(rule.PortRange).Should(Equal(garden.PortRange{}))
-				Ω(rule.Protocol).Should(Equal(garden.ProtocolICMP))
-				Ω(rule.IcmpType).Should(Equal(int32(-1)))
-				Ω(rule.IcmpCode).Should(Equal(int32(-1)))
-				Ω(rule.Log).Should(Equal(false))
 			})
 
-			It("permits UDP traffic outside of the container", func() {
-				err := container.NetOut(garden.UDPRule{
-					Network:   "1.2.3.4/22",
-					Port:      1234,
-					PortRange: garden.PortRange{8080, 8181},
+			Context("when icmps are specified without a code", func() {
+				It("permits traffic matching those icmps", func() {
+					Ω(container.NetOut(garden.NetOutRule{
+						ICMPs: &garden.ICMPControl{Type: 4},
+					})).Should(Succeed())
+
+					rule := fakeContainer.NetOutArgsForCall(0)
+					Ω(rule.ICMPs).Should(Equal(&garden.ICMPControl{Type: 4}))
 				})
-				Ω(err).ShouldNot(HaveOccurred())
-
-				ruler := fakeContainer.NetOutArgsForCall(0)
-				rule := ruler.Rule()
-
-				Ω(rule.Network).Should(Equal("1.2.3.4/22"))
-				Ω(rule.Port).Should(Equal(uint32(1234)))
-				Ω(rule.PortRange).Should(Equal(garden.PortRange{8080, 8181}))
-				Ω(rule.Protocol).Should(Equal(garden.ProtocolUDP))
-				Ω(rule.Log).Should(Equal(false))
 			})
 
-			It("permits logged TCP traffic outside of the container", func() {
-				err := container.NetOut(garden.TCPRule{
-					Network:   "1.2.3.4/22",
-					Port:      1234,
-					PortRange: garden.PortRange{8080, 8181},
-					Log:       true,
+			Context("when icmps are specified with a code", func() {
+				It("permits traffic matching those icmps", func() {
+					var code garden.ICMPCode = 34
+					Ω(container.NetOut(garden.NetOutRule{
+						ICMPs: &garden.ICMPControl{Type: 4, Code: &code},
+					})).Should(Succeed())
+
+					rule := fakeContainer.NetOutArgsForCall(0)
+					Ω(rule.ICMPs).Should(Equal(&garden.ICMPControl{Type: 4, Code: &code}))
 				})
-				Ω(err).ShouldNot(HaveOccurred())
-
-				ruler := fakeContainer.NetOutArgsForCall(0)
-				rule := ruler.Rule()
-
-				Ω(rule.Network).Should(Equal("1.2.3.4/22"))
-				Ω(rule.Port).Should(Equal(uint32(1234)))
-				Ω(rule.PortRange).Should(Equal(garden.PortRange{8080, 8181}))
-				Ω(rule.Protocol).Should(Equal(garden.ProtocolTCP))
-				Ω(rule.Log).Should(Equal(true))
 			})
 
-			Context("with an invalid port range", func() {
-				It("should return an error when the start of the port range is 0", func() {
-					err := container.NetOut(garden.TCPRule{
-						Network:   "foo-network",
-						PortRange: garden.PortRange{0, 8081},
-						Log:       false,
-					})
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "0:8081"`))
-				})
+			Context("when log is true", func() {
+				It("requests that the rule logs", func() {
+					Ω(container.NetOut(garden.NetOutRule{Log: true})).Should(Succeed())
 
-				It("should return an error when the end of the port range is 0", func() {
-					err := container.NetOut(garden.TCPRule{
-						Network:   "foo-network",
-						PortRange: garden.PortRange{8080, 0},
-						Log:       false,
-					})
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "8080:0"`))
+					rule := fakeContainer.NetOutArgsForCall(0)
+					Ω(rule.Log).Should(BeTrue())
 				})
-
-				It("should return an error when the start of the port range is greater than the end of the port range", func() {
-					err := container.NetOut(garden.TCPRule{
-						Network:   "foo-network",
-						PortRange: garden.PortRange{8080, 8070},
-						Log:       false,
-					})
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "8080:8070"`))
-				})
-
-				It("should return an error when the start of the port range is too large", func() {
-					err := container.NetOut(garden.TCPRule{
-						Network:   "foo-network",
-						PortRange: garden.PortRange{65536, 8081},
-						Log:       false,
-					})
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "65536:8081"`))
-				})
-
-				It("should return an error when the end of the port range is too large", func() {
-					err := container.NetOut(garden.TCPRule{
-						Network:   "foo-network",
-						PortRange: garden.PortRange{8080, 65536},
-						Log:       false,
-					})
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "8080:65536"`))
-				})
-
-				It("should return an error when the start of the port range is much too large", func() {
-					err := container.NetOut(garden.TCPRule{
-						Network:   "foo-network",
-						PortRange: garden.PortRange{200000000, 8081},
-						Log:       false,
-					})
-					Ω(err).Should(HaveOccurred())
-					Ω(err).Should(MatchError(`invalid port range: "200000000:8081"`))
-				})
-
 			})
 
 			itResetsGraceTimeWhenHandling(func() {
-				err := container.NetOut(garden.TCPRule{
-					Network: "1.2.3.4/22",
-					Port:    456,
-					Log:     false,
-				})
+				err := container.NetOut(garden.NetOutRule{})
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 
 			itFailsWhenTheContainerIsNotFound(func() {
-				err := container.NetOut(garden.TCPRule{
-					Network: "1.2.3.4/22",
-					Port:    456,
-					Log:     false,
-				})
+				err := container.NetOut(garden.NetOutRule{})
 				Ω(err).Should(HaveOccurred())
 			})
 
@@ -1218,11 +1153,7 @@ var _ = Describe("When a client connects", func() {
 				})
 
 				It("fails", func() {
-					err := container.NetOut(garden.TCPRule{
-						Network: "1.2.3.4/22",
-						Port:    456,
-						Log:     false,
-					})
+					err := container.NetOut(garden.NetOutRule{})
 					Ω(err).Should(HaveOccurred())
 				})
 			})

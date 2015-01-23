@@ -1,9 +1,6 @@
 package garden
 
-import (
-	"io"
-	"net"
-)
+import "io"
 
 //go:generate counterfeiter . Container
 
@@ -93,17 +90,8 @@ type Container interface {
 	// If the configuration directive deny_networks is not used,
 	// all networks are already whitelisted and this command is effectively a no-op.
 	//
-	// A NetOutRule is a structure with fields:
-	// {
-	//     Protocol  Protocol         // the protocol to be whitelisted (default TCP)
-	//     Network   *NetworkInterval // a range of network addresses to whitelist; Start to End inclusive; default all
-	//     Ports     *PortInterval    // a range of ports to whitelist; Start to End inclusive; ignored if Protocol is ICMP
-	//     Icmps     *ICMPControl     // specifying which ICMP codes to whitelist; ignored if Protocol is not ICMP
-	//     Log       bool             // if true, logging is enabled; ignored if Protocol is not TCP or All
-	// }
-	//
 	// Errors:
-	// * None.
+	// * An error is returned if the NetOut call fails.
 	NetOut(netOutRule NetOutRule) error
 
 	// Run a script inside a container.
@@ -138,38 +126,6 @@ type Container interface {
 	// Errors:
 	// * None.
 	RemoveProperty(name string) error
-}
-
-type NetOutRule struct {
-	Protocol Protocol
-	Network  *NetworkInterval
-	Ports    *PortInterval
-	Icmps    *ICMPControl
-	Log      bool
-}
-
-type Protocol uint8
-
-const (
-	ProtocolTCP Protocol = 1 << iota
-	ProtocolUDP
-	ProtocolICMP
-	ProtocolAll Protocol = (1 << iota) - 1
-)
-
-type NetworkInterval struct {
-	Start net.IP
-	End   net.IP
-}
-
-type PortInterval struct {
-	Start uint16
-	End   uint16
-}
-
-type ICMPControl struct {
-	Type uint8
-	Code *uint8
 }
 
 // ProcessSpec contains parameters for running a script inside a container.

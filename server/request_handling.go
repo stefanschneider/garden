@@ -7,8 +7,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -715,22 +713,6 @@ func (s *GardenServer) handleNetIn(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func validPortRange(portRange string) (garden.PortRange, bool) {
-	lo, hi, valid := 0, 0, true
-
-	if portRange != "" {
-		if r := strings.Split(portRange, ":"); len(r) != 2 {
-			valid = false
-		} else {
-			var startErr, endErr error
-			lo, startErr = strconv.Atoi(r[0])
-			hi, endErr = strconv.Atoi(r[1])
-			valid = startErr == nil && endErr == nil && lo > 0 && lo <= 65535 && hi > 0 && hi <= 65535 && lo <= hi
-		}
-	}
-	return garden.PortRange{uint32(lo), uint32(hi)}, valid
-}
-
 func (s *GardenServer) handleNetOut(w http.ResponseWriter, r *http.Request) {
 	handle := r.FormValue(":handle")
 
@@ -759,17 +741,29 @@ func (s *GardenServer) handleNetOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	network := request.GetNetwork()
-	port := request.GetPort()
-	portRange := request.GetPortRange()
-	icmpType := request.GetIcmpType()
-	icmpCode := request.GetIcmpCode()
+	var network *garden.IPRange
+	if n := request.GetNetwork(); n != nil {
+		network = &garden.IPRange{
+			Start: net.ParseIP(n.GetStart()),
+			End:   net.ParseIP(n.GetEnd()),
+		}
+	}
 
-	pRange, valid := validPortRange(portRange)
-	if !valid {
-		err := fmt.Errorf("invalid port range: %q", portRange)
-		s.writeError(w, err, hLog)
-		return
+	var ports *garden.PortRange
+	if p := request.GetPorts(); p != nil {
+		ports = &garden.PortRange{uint16(p.GetStart()), uint16(p.GetEnd())}
+	}
+
+	var icmps *garden.ICMPControl
+	if i := request.GetIcmps(); i != nil {
+		icmps = &garden.ICMPControl{
+			Type: garden.ICMPType(i.GetType()),
+		}
+
+		if gc := i.GetCode(); gc != -1 {
+			c := uint8(gc)
+			icmps.Code = (*garden.ICMPCode)(&c)
+		}
 	}
 
 	container, err := s.backend.Lookup(handle)
@@ -781,25 +775,32 @@ func (s *GardenServer) handleNetOut(w http.ResponseWriter, r *http.Request) {
 	s.bomberman.Pause(container.Handle())
 	defer s.bomberman.Unpause(container.Handle())
 
-	hLog.Debug("allowing-out", lager.Data{
-		"network":   network,
-		"port":      port,
-		"portRange": portRange,
-		"protocol":  protoc,
-		"icmpType":  icmpType,
-		"icmpCode":  icmpCode,
+	// hLog.Debug("allowing-out", lager.Data{
+	// 	"network":   network,
+	// 	"port":      port,
+	// 	"portRange": portRange,
+	// 	"protocol":  protoc,
+	// 	"icmpType":  icmpType,
+	// 	"icmpCode":  icmpCode,
+	// })
+
+	err = container.NetOut(garden.NetOutRule{
+		Protocol: protoc,
+		Network:  network,
+		Ports:    ports,
+		ICMPs:    icmps,
+		Log:      request.GetLog(),
 	})
 
-	err = container.NetOut(garden.NetOutRule{network, port, pRange, protoc, icmpType, icmpCode, request.GetLog()})
 	if err != nil {
 		s.writeError(w, err, hLog)
 		return
 	}
 
-	hLog.Info("allowed", lager.Data{
-		"network": network,
-		"port":    port,
-	})
+	// hLog.Info("allowed", lager.Data{
+	// 	"network": network,
+	// 	"port":    port,
+	// })
 
 	s.writeResponse(w, &protocol.NetOutResponse{})
 }
