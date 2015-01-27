@@ -183,6 +183,10 @@ var _ = Describe("Connection", func() {
 								Key:   proto.String("foo"),
 								Value: proto.String("bar"),
 							},
+							{
+								Key:   proto.String("foo2"),
+								Value: proto.String("bar2"),
+							},
 						},
 						Env: []*protocol.EnvironmentVariable{
 							{
@@ -217,7 +221,8 @@ var _ = Describe("Connection", func() {
 					},
 				},
 				Properties: map[string]string{
-					"foo": "bar",
+					"foo":  "bar",
+					"foo2": "bar2",
 				},
 				Env: []string{"env1=env1Value1"},
 			})
@@ -1514,6 +1519,32 @@ var _ = Describe("Connection", func() {
 					_, err = process.Wait()
 					Ω(err).Should(HaveOccurred())
 				})
+			})
+		})
+	})
+
+	Describe("Properties", func() {
+		Context("setting", func() {
+
+		})
+
+		Context("getting", func() {
+
+			BeforeEach(func() {
+				value := "some-value"
+				server.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", "/containers/some-handle/properties/some-key"),
+						ghttp.RespondWith(200, marshalProto(&protocol.GetPropertyResponse{
+							Value: &value,
+						}))))
+			})
+
+			It("should return the property value", func() {
+				value, err := connection.GetProperty("some-handle", "some-key")
+				Ω(err).ShouldNot(HaveOccurred())
+
+				Ω(value).Should(Equal("some-value"))
 			})
 		})
 	})
