@@ -20,14 +20,52 @@ type CreateRequest struct {
 
 func NewCreateRequest(spec garden.ContainerSpec) *CreateRequest {
 	return &CreateRequest{
-		Handle:     OptString(spec.Handle),
-		Rootfs:     OptString(spec.RootFSPath),
+		Handle:     optString(spec.Handle),
+		Rootfs:     optString(spec.RootFSPath),
 		GraceTime:  OptTimeSecs(spec.GraceTime),
-		Network:    OptString(spec.Network),
+		Network:    optString(spec.Network),
 		Env:        ConvertEnvironmentVariables(spec.Env),
-		Privileged: PBool(spec.Privileged),
+		Privileged: pBool(spec.Privileged),
 		BindMounts: ConvertBindMounts(spec.BindMounts),
 		Properties: ConvertProperties(spec.Properties),
+	}
+}
+
+func NewContainerSpec(request *CreateRequest, defaultGraceTime time.Duration) *garden.ContainerSpec {
+	bindMounts := []garden.BindMount{}
+
+	for _, bm := range request.BindMounts {
+		bindMount := garden.BindMount{
+			SrcPath: *bm.SrcPath,
+			DstPath: *bm.DstPath,
+			Mode:    garden.BindMountMode(*bm.Mode),
+			Origin:  garden.BindMountOrigin(*bm.Origin),
+		}
+
+		bindMounts = append(bindMounts, bindMount)
+	}
+
+	properties := map[string]string{}
+
+	for _, prop := range request.Properties {
+		properties[*prop.Key] = *prop.Value
+	}
+
+	graceTime := defaultGraceTime
+
+	if request.GraceTime != nil {
+		graceTime = time.Duration(*request.GraceTime) * time.Second
+	}
+
+	return &garden.ContainerSpec{
+		Handle:     stringOpt(request.Handle),
+		GraceTime:  graceTime,
+		RootFSPath: stringOpt(request.Rootfs),
+		Network:    stringOpt(request.Network),
+		BindMounts: bindMounts,
+		Properties: properties,
+		Env:        ConvertEnv(request.Env),
+		Privileged: *request.Privileged,
 	}
 }
 
@@ -48,8 +86,14 @@ type EnvironmentVariable struct {
 	Value *string `json:"Value,omitempty"`
 }
 
-type CreateResponse struct {
-	Handle *string `json:"handle,omitempty"`
+func ConvertEnv(env []*EnvironmentVariable) []string {
+	var converted []string
+
+	for _, e := range env {
+		converted = append(converted, *e.Key+"="+*e.Value)
+	}
+
+	return converted
 }
 
 func ConvertEnvironmentVariables(environmentVariables []string) []*EnvironmentVariable {
@@ -73,8 +117,8 @@ func ConvertBindMounts(srcBms []garden.BindMount) []*CreateRequest_BindMount {
 	var tgtBms []*CreateRequest_BindMount
 	for _, bm := range srcBms {
 		tgtBms = append(tgtBms, &CreateRequest_BindMount{
-			SrcPath: PString(bm.SrcPath),
-			DstPath: PString(bm.DstPath),
+			SrcPath: pString(bm.SrcPath),
+			DstPath: pString(bm.DstPath),
 			Mode:    pBindMountMode(bm.Mode),
 			Origin:  pBindMountOrigin(bm.Origin),
 		})
@@ -96,8 +140,8 @@ func ConvertProperties(srcProps garden.Properties) []*Property {
 	var tgtProps []*Property
 	for key, val := range srcProps {
 		tgtProps = append(tgtProps, &Property{
-			Key:   PString(key),
-			Value: PString(val),
+			Key:   pString(key),
+			Value: pString(val),
 		})
 	}
 	return tgtProps
@@ -113,4 +157,12 @@ func OptTimeSecs(tm time.Duration) *uint32 {
 // pUint32 copies a uint32 and returns the address of the copy.
 func pUint32(i uint32) *uint32 {
 	return &i
+}
+
+type CreateResponse struct {
+	Handle *string `json:"handle,omitempty"`
+}
+
+func NewCreateResponse(handle string) *CreateResponse {
+	return &CreateResponse{Handle: &handle}
 }

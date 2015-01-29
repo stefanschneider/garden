@@ -183,10 +183,6 @@ var _ = Describe("Connection", func() {
 								Key:   proto.String("foo"),
 								Value: proto.String("bar"),
 							},
-							{
-								Key:   proto.String("foo2"),
-								Value: proto.String("bar2"),
-							},
 						},
 						Env: []*protocol.EnvironmentVariable{
 							{
@@ -221,8 +217,7 @@ var _ = Describe("Connection", func() {
 					},
 				},
 				Properties: map[string]string{
-					"foo":  "bar",
-					"foo2": "bar2",
+					"foo": "bar",
 				},
 				Env: []string{"env1=env1Value1"},
 			})

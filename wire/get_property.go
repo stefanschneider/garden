@@ -7,12 +7,16 @@ type GetPropertyRequest struct {
 
 func NewGetPropertyRequest(handle string, name string) *GetPropertyRequest {
 	return &GetPropertyRequest{
-		Handle: PString(handle),
-		Key:    PString(name),
+		Handle: pString(handle),
+		Key:    pString(name),
 	}
 
 }
 
 type GetPropertyResponse struct {
 	Value *string // `json:"value,omitempty"`
+}
+
+func NewGetPropertyResponse(value string) *GetPropertyResponse {
+	return &GetPropertyResponse{Value: &value}
 }

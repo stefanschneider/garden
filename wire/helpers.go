@@ -1,18 +1,25 @@
 package wire
 
-// PString copies a string and returns the address of the copy.
-func PString(src string) *string {
+// pString copies a string and returns the address of the copy.
+func pString(src string) *string {
 	return &src
 }
 
-func OptString(src string) *string {
+// pBool copies a bool and returns the address of the copy.
+func pBool(b bool) *bool {
+	return &b
+}
+
+func optString(src string) *string {
 	if src == "" {
 		return nil
 	}
-	return PString(src)
+	return pString(src)
 }
 
-// PBool copies a bool and returns the address of the copy.
-func PBool(b bool) *bool {
-	return &b
+func stringOpt(src *string) string {
+	if src == nil {
+		return ""
+	}
+	return *src
 }
