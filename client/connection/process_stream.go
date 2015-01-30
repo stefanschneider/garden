@@ -23,10 +23,10 @@ type processStream struct {
 }
 
 func (s *processStream) WriteStdin(data []byte) error {
-	return s.sendPayload(&protocol.ProcessPayload{
-		ProcessId: proto.Uint32(s.id),
-		Source:    &stdin,
-		Data:      proto.String(string(data)),
+	return s.sendPayload(map[string]interface{}{
+		"process_id": s.id,
+		"source":     transport.Stdin,
+		"data":       string(data),
 	})
 }
 
@@ -74,7 +74,7 @@ func (s *processStream) Close() error {
 	return s.conn.Close()
 }
 
-func (s *processStream) sendPayload(payload *protocol.ProcessPayload) error {
+func (s *processStream) sendPayload(payload interface{}) error {
 	s.Lock()
 
 	err := transport.WriteMessage(s.conn, payload)

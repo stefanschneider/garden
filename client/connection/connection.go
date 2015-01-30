@@ -168,11 +168,6 @@ func (c *connection) Destroy(handle string) error {
 func (c *connection) Run(handle string, spec garden.ProcessSpec, processIO garden.ProcessIO) (garden.Process, error) {
 	reqBody := new(bytes.Buffer)
 
-	var dir *string
-	if spec.Dir != "" {
-		dir = proto.String(spec.Dir)
-	}
-
 	var tty *protocol.TTY
 	if spec.TTY != nil {
 		tty = &protocol.TTY{}
@@ -185,33 +180,7 @@ func (c *connection) Run(handle string, spec garden.ProcessSpec, processIO garde
 		}
 	}
 
-	err := transport.WriteMessage(reqBody, &protocol.RunRequest{
-		Handle:     proto.String(handle),
-		Path:       proto.String(spec.Path),
-		Args:       spec.Args,
-		Dir:        dir,
-		Privileged: proto.Bool(spec.Privileged),
-		User:       proto.String(spec.User),
-		Tty:        tty,
-		Rlimits: &protocol.ResourceLimits{
-			As:         spec.Limits.As,
-			Core:       spec.Limits.Core,
-			Cpu:        spec.Limits.Cpu,
-			Data:       spec.Limits.Data,
-			Fsize:      spec.Limits.Fsize,
-			Locks:      spec.Limits.Locks,
-			Memlock:    spec.Limits.Memlock,
-			Msgqueue:   spec.Limits.Msgqueue,
-			Nice:       spec.Limits.Nice,
-			Nofile:     spec.Limits.Nofile,
-			Nproc:      spec.Limits.Nproc,
-			Rss:        spec.Limits.Rss,
-			Rtprio:     spec.Limits.Rtprio,
-			Sigpending: spec.Limits.Sigpending,
-			Stack:      spec.Limits.Stack,
-		},
-		Env: convertEnvironmentVariables(spec.Env),
-	})
+	err := transport.WriteMessage(reqBody, spec)
 	if err != nil {
 		return nil, err
 	}
