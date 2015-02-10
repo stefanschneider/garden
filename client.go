@@ -2,10 +2,177 @@ package garden
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 )
 
 //go:generate counterfeiter . Client
+
+type ProgressMonitor interface{}
+
+/*
+* Example Usage:
+*
+*
+* Rootfses:
+* --------
+*
+* - Importing a Docker RootFS:
+* dockerImage := NewDockerImageImporter("url").Import("ubuntu:latest")
+* rootfs := Must(dockerImage.Mount(printProgress(), 1 * time.Hour))
+*
+* - Importing a Garden RootFS (creates a RW layer, because you always want this for a rootfs so no need to do two steps):
+* rootfs := Must(NewGardenRootfs("path/on/host", 1 * time.Hour))
+*
+* - Importing a Rocket RootFS (rocket!!!)
+* rocketImage := NewRocketImageImporter("url").Import("foo/bar/baz")
+* rootfs := Must(rocketImage.Mount(printProgress(), 1 * time.Hour)
+*
+* - Creating a container from a Docker rootfs:
+* (nb: the TTL is handled by the Docker/Garden/RootFS backends, garden calls the Bind/Unbind methods
+*  on the Volume object to inform the rootfs TTL trackers about these events, this is necessary because
+*  you may never get to .Create but you still want your image to be cleaned up)
+* container := client.Create(ContainerSpec{ Rootfs: rootfs })
+*
+*
+* Volumes:
+* -------
+*
+* - Creating a Volume:
+* volume := NewHostPathVolume("path/on/host")
+*
+* - Importing a Volume from a HTTP address (if for some reason we think this is Garden's job):
+* volume, err := ImportHTTPVolume("address", 1 * time.Hour)
+*
+* - Binding a volume into a container
+* (note no need to expose creating read-only and read-write layers, just bind RO/RW as needed,
+*  by creating the layer when we know what container it will be mounted in to we can make sure we choose
+*  the right sort of filesystem overlay technique).
+* container.Create(ContainerSpec{ BindMounts: []BindMount{ Volume: rwVolume, Path: "/foo", Mode: RW } })
+* //or
+* container.BindVolume(rwVolume, "/foo", RO)
+*
+* - Binding a volume from one container to another
+* (below we create a volume whose source is a container - a la docker - and give it a TTL, this volume prevents
+* auto-cleanup of otherContainer until it is deleted/cleaned up; this is - I think - the only multi-step dependency here)
+* container.BindVolume( NewGuestVolume(otherContainer, "/foo", 1 * time.Hour), "/bar", RW)
+*
+* TTLs:
+* ----
+*
+* Various objects have TTLs, this is all handled by a TTLTracker in these structs. The TTLTracker has
+* Use(handle) and Unuse(handle) methods which are called by garden when a Volume/Rootfs/etc are used/mounted/unmounted.
+* This allows the cleanup etc. to happen in the Rootfs/Volume components, not in garden, while not requiring the client
+* to worry about that stuff. For composite TTLs (i.e. this volume depends on this volume) we could use a CompositeTTLTracker
+* that knows to use/unuse its dependencies, but I *think* the above design avoids any transitive dependencies anyway (apart from
+* container->rootfs and container->volume and the unavoidable transitive dependency if you mount a volume from inside a container).
+*
+*
+* Properties:
+* ----------
+*
+* Since DockerImage (etc), DockerRootfs, HostPathRootfs, HostVolume, BoundVolume etc. are fully
+* separate objects above there is no ambiguity about their properties -- each has its own independent PropertyManager.
+ */
+
+// DockerRootfs imports a docker image from a repository and returns the metadata
+type DockerImageImporter interface {
+	Import(dockerId string) (DockerImage, error)
+	GenerateFromDockerfile(dockerFile string) (DockerImage, error) // for funsies
+}
+
+// DockerImage is the metadata of a docker image, calling .Mount() provides a RootFS that
+// can be used to launch a docker container. DockerImage has nothing to do with Rootfses at all except that it
+// provides a .Mount() method to create one.
+type DockerImage struct {
+	Env     []string
+	Volumes []string
+	// etc
+}
+
+// Mount mounts a Docker Image as a Rootfs. The given TTL controls how long the mounted
+// volume will survive if no containers refer to it.
+func (DockerImage) Mount(pm ProgressMonitor, TTL time.Duration) (Rootfs, error) {
+	// download with progress monitor, mount as a layer, return DockerVolume
+	// create TTLTracker with TTLTracker.New(TTL)
+	return nil, nil
+}
+
+type DockerRootfs struct {
+	HostPath
+	PropertyManager
+	TTLTracker
+}
+
+type GardenRootfs struct {
+	HostPath
+	PropertyManager
+	TTLTracker
+}
+
+type HostPath string
+
+func (h HostPath) HostPath() string {
+	return string(h)
+}
+
+// TTLTracker is implemented by things that have a TTL. Garden calls Use and Unuse when a particular container starts and
+// stops referring to an object. The object can use this to self-destruct when noone is referring to it. Concrete implementations
+// of TTLTracker can take all the work out of implementing this (obv).
+type TTLTracker interface {
+	Use(handle string)   // I started using you, stop the timer
+	Unuse(handle string) // I stopped using you, restart the timer
+}
+
+// A Rootfs is implemented by objects which are valid values for the Rootfs field in ContainerSpec.
+type Rootfs interface {
+	HostPath() string // where do we mount from?
+	TTLTracker        // garden will call Use() and Unuse() when a container is created/destroyed from this rootfs
+}
+
+// A HostVolume is a volume which exists on the host
+type HostVolume struct {
+	HostPath string
+	PropertyManager
+	TTLTracker
+}
+
+// A GuestVolume is a volume mounted from inside a container
+type GuestVolume struct {
+	ContainerHandle string
+	ContainerPath   string
+	PropertyManager
+}
+
+type BoundVolume struct {
+	ContainerHandle string
+	ContainerPath   string
+	PropertyManager
+}
+
+func (BoundVolume) Unbind() error {
+	return nil
+}
+
+// Creates a DockerImageImporter from a particular repository URL
+func NewDockerImageImporter(endpoint url.URL) (DockerImageImporter, error) {
+	return nil, nil
+}
+
+// Create a GardenRootfs by mounting a RW layer on top of a given HostPath. The rootfs is automatically
+// removed once the TTL is expired unless the rootfs is used as the Rootfs of a container (in which case garden
+// will call `Use` and `Unuse` appropriately so that the TTL is maintained.
+func NewGardenRootfs(path HostPath, ttl time.Duration) (*GardenRootfs, error) {
+	return nil, nil
+}
+
+// create a volume from inside a running container, the container's TTL will be `Used` until this
+// volume times out or is destroyed, at which point it will be `Unused`.
+func NewGuestVolume(container Container, path string, ttl time.Duration) (*GuestVolume, error) {
+	return nil, nil
+}
+
+type PropertyManager interface{}
 
 type Client interface {
 	// Pings the garden server.
