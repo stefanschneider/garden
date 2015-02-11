@@ -164,7 +164,7 @@ var _ = Describe("When a client connects", func() {
 					{
 						SrcPath: "/bind/mount/src",
 						DstPath: "/bind/mount/dst",
-						Mode:    garden.BindMountModeRW,
+						Mode:    garden.BindModeRW,
 						Origin:  garden.BindMountOriginContainer,
 					},
 				},
@@ -185,7 +185,7 @@ var _ = Describe("When a client connects", func() {
 					{
 						SrcPath: "/bind/mount/src",
 						DstPath: "/bind/mount/dst",
-						Mode:    garden.BindMountModeRW,
+						Mode:    garden.BindModeRW,
 						Origin:  garden.BindMountOriginContainer,
 					},
 				},

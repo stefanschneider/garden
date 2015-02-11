@@ -128,6 +128,19 @@ type Container interface {
 	// Errors:
 	// * None.
 	RemoveProperty(name string) error
+
+	// BindVolume mounts a volume into this container using the given spec.
+	// Access to the volume is direct; no layers are created.
+	// Use CreateVolumeFromVolume to add a layer.
+	// Returns a BoundVolume.
+	BindVolume(spec BindVolumeSpec) (BoundVolume, error)
+
+	// BoundVolumes returns the volumes bound to this container.
+	BoundVolumes() []BoundVolume
+
+	// Unbind unbinds the given bound volume from this container.
+	// If the volume is not bound to this container, an error is returned.
+	Unbind(bv BoundVolume) error
 }
 
 // ProcessSpec contains parameters for running a script inside a container.

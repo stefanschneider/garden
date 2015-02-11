@@ -181,13 +181,13 @@ var _ = Describe("Connection", func() {
 						{
 							SrcPath: "/src-a",
 							DstPath: "/dst-a",
-							Mode:    garden.BindMountModeRO,
+							Mode:    garden.BindModeRO,
 							Origin:  garden.BindMountOriginHost,
 						},
 						{
 							SrcPath: "/src-b",
 							DstPath: "/dst-b",
-							Mode:    garden.BindMountModeRW,
+							Mode:    garden.BindModeRW,
 							Origin:  garden.BindMountOriginContainer,
 						},
 					},
