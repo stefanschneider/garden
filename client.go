@@ -34,13 +34,13 @@ import (
  * -------
  *
  * - Creating a new empty Volume:
- * volume1, _ := CreateVolume("vol1", 1 * time.Hour)
+ * volume1, _ := client.CreateVolume(1 * time.Hour)
  *
  * - Creating a Volume from a host directory:
- * volume2, _ := CreateVolumeFromPath("vol2", 1 * time.Hour, "path/on/host", VolumeModeRO)
+ * volume2, _ := client.CreateVolumeFromPath(1 * time.Hour, "path/on/host", VolumeModeRO)
  *
  * - Creating a Volume from another Volume:
- * volume3, _ := CreateVolumeFromVolume("vol3", 1 * time.Hour, volume2, VolumeModeRW)
+ * volume3, _ := client.CreateVolumeFromVolume(1 * time.Hour, volume2, VolumeModeRW)
  *
  * - Binding a volume into a container:
  * ctr, _ := client.Create(ContainerSpec{
@@ -130,6 +130,8 @@ type Client interface {
 	// Errors:
 	// * Container not found.
 	Lookup(handle string) (Container, error)
+
+	VolumeManager
 }
 
 type ContainerNotFoundError struct {

@@ -2,16 +2,12 @@ package garden
 
 import "time"
 
-// Note: Volumes should generate their ids and not be named.
-// Pass ids instead of Volumes on other interfaces
-// Consider a volume collection object
-
 // A Volume is a named directory in the host with some associated properties.
 type Volume interface {
 	PropertyManager
 
-	// Name returns the name of the volume.
-	Name() string
+	// Id returns the identifier of the volume.
+	Id() string
 
 	// Path returns the host path of the volume's directory.
 	Path() string
@@ -49,27 +45,27 @@ const (
 	VolumeModeRW
 )
 
-// CreateVolume creates an empty volume with a given name and TTL.
-func CreateVolume(name string, ttl time.Duration) (Volume, error) {
-	return nil, nil
-}
+// Extension to the client interface. Manages a collection of volumes associated with the server.
+type VolumeManager interface {
+	// CreateVolume creates an empty volume with a TTL. Returns the new volume.
+	CreateVolume(ttl time.Duration) (Volume, error)
 
-// CreateVolumeFromPath creates a new volume with a given name and TTL. The volume directly accesses
-// the directory at the given path on the host. The given mode determines the mode of access (note: it does not
-// produce a copy on write layer).
-func CreateVolumeFromPath(name string, ttl time.Duration, hostPath string, mode VolumeMode) (Volume, error) {
-	return nil, nil
-}
+	// CreateVolumeFromPath creates a new volume with a TTL. The volume directly accesses
+	// the directory at the given path on the host. The given mode determines the mode of access
+	// (note: it does not produce a copy-on-write layer). Returns the new volume.
+	CreateVolumeFromPath(ttl time.Duration, hostPath string, mode VolumeMode) (Volume, error)
 
-// CreateVolumeFromVolume creates a new volume with a given name and TTL. The volume is a logical copy of
-// the base volume. The given mode determines the mode of access. The properties of the new volume
-// are a snapshot of the properties of the base volume.
-// Note: read-write mode may be implemented using copy on write.
-func CreateVolumeFromVolume(name string, ttl time.Duration, baseVolume Volume, mode VolumeMode) (Volume, error) {
-	return nil, nil
-}
+	// CreateVolumeFromVolume creates a new volume with a TTL. The volume is a logical copy of
+	// the base volume. The given mode determines the mode of access. The properties of the new volume
+	// are a snapshot of the properties of the base volume. Returns the new volume.
+	// Note: read-write mode may be implemented using copy on write.
+	CreateVolumeFromVolume(ttl time.Duration, baseVolume Volume, mode VolumeMode) (Volume, error)
 
-// DestroyVolume destroys the volume with the given name.
-func DestroyVolume(name string) error {
-	return nil
+	// GetVolume returns the Volume with the given id.
+	GetVolume(id string) (Volume, error)
+
+	// DestroyVolume destroys the volume with the given id. The volume is marked for deletion and
+	// removed from the set of known volumes. Underlying system resources are not released until the
+	// volume is no longer referenced.
+	DestroyVolume(id string) error
 }
