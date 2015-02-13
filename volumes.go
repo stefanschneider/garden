@@ -6,11 +6,8 @@ import "time"
 type Volume interface {
 	PropertyManager
 
-	// Id returns the identifier of the volume.
-	Id() string
-
-	// Path returns the host path of the volume's directory.
-	Path() string
+	// Handle returns the handle of the volume.
+	Handle() string
 }
 
 // BindVolumeSpec collects the parameters used to bind a volume.
@@ -38,34 +35,44 @@ type BoundVolume interface {
 	Spec() *BindVolumeSpec
 }
 
-type VolumeMode uint8
-
-const (
-	VolumeModeRO VolumeMode = iota
-	VolumeModeRW
-)
-
 // Extension to the client interface. Manages a collection of volumes associated with the server.
 type VolumeManager interface {
 	// CreateVolume creates an empty volume with a TTL. Returns the new volume.
-	CreateVolume(ttl time.Duration) (Volume, error)
+	// The properties of the new volume are empty.
+	// If both HostPath and BaseVolume are specified, the Volume is initially empty.
+	// If both HostPath and BaseVolume are specified, an error is returned.
+	CreateVolume(VolumeSpec) (Volume, error)
 
-	// CreateVolumeFromPath creates a new volume with a TTL. The volume directly accesses
-	// the directory at the given path on the host. The given mode determines the mode of access
-	// (note: it does not produce a copy-on-write layer). Returns the new volume.
-	CreateVolumeFromPath(ttl time.Duration, hostPath string, mode VolumeMode) (Volume, error)
+	// GetVolume returns the Volume with the given handle.
+	GetVolume(handle string) (Volume, error)
 
-	// CreateVolumeFromVolume creates a new volume with a TTL. The volume is a logical copy of
-	// the base volume. The given mode determines the mode of access. The properties of the new volume
-	// are a snapshot of the properties of the base volume. Returns the new volume.
-	// Note: read-write mode may be implemented using copy on write.
-	CreateVolumeFromVolume(ttl time.Duration, baseVolume Volume, mode VolumeMode) (Volume, error)
-
-	// GetVolume returns the Volume with the given id.
-	GetVolume(id string) (Volume, error)
+	// Volumes returns the volumes which match the given properties.
+	Volumes(Properties) ([]Volume, error)
 
 	// DestroyVolume destroys the volume with the given id. The volume is marked for deletion and
 	// removed from the set of known volumes. Underlying system resources are not released until the
 	// volume is no longer referenced.
-	DestroyVolume(id string) error
+	DestroyVolume(handle string) error
+}
+
+// A TTL specifies the duration that a particular object can remain unused before it is automatically deleted.
+type TTL time.Duration
+
+type VolumeSpec struct {
+	// Handle, if specified, is used to refer to the
+	// Volume in future requests. If it is not specified,
+	// garden uses its internal Volume ID as the Volume handle.
+	// TODO: are there any restrictions?
+	Handle string `json:"handle,omitempty"`
+
+	// A TTL for the Volume.
+	TTL TTL
+
+	// If specified, this volume is logically a writable copy of the given BaseVolume.
+	// Writes to this volume do not affect the underlying BaseVolume.
+	BaseVolume Volume
+
+	// If specified, this volume directly accesses the directory at the given path on the host.
+	// Writes to this volume affect the underlying HostPath.
+	HostPath string
 }

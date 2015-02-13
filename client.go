@@ -157,7 +157,7 @@ type ContainerSpec struct {
 	GraceTime time.Duration `json:"grace_time,omitempty"`
 
 	// Rootfs is a root file system for the container, created by Image.Mount().
-	Rootfs Rootfs `json:"root_fs,omitempty"`
+	Rootfs Rootfs `json:"rootfs,omitempty"`
 
 	// BindVolumes is a list of volumes to be bound, together with the bind parameters,
 	// on container creation.
@@ -217,20 +217,18 @@ type Properties map[string]string
 type PropertyManager interface {
 	// Set sets the named property to the given value. If the property was previously set,
 	// its value is updated.
-	Set(name, value string)
+	Set(name, value string) error
 
 	// Has returns true if and only if the named property exists.
-	Has(name string) bool
+	Has(name string) (bool, error)
 
 	// Get returns the value of a named property if it exists, or the empty string otherwise.
-	Get(name string) string
+	Get(name string) (string, error)
 
 	// Remove deletes the named property if it exists, or does nothing otherwise.
-	Remove(name string)
+	Remove(name string) error
 }
 
 // Rootfs represents a root file system, appropriately set up for use by a container.
-type Rootfs interface {
-	// Path returns the directory path of the Rootfs.
-	Path() string
+type Rootfs struct {
 }

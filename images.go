@@ -38,16 +38,20 @@ type DockerMetadata struct {
 	// TBD
 }
 
-// DockerImageImporter creates a DockerImage from a Docker repository.
-type DockerImageImporter interface {
+// DockerImageRepository represents a connection to a Docker repository.
+type DockerImageRepository interface {
 	// Import creates a DockerImage with the given id, from this importer.
 	Import(id string) (DockerImage, error)
 }
 
-// Creates a DockerImageImporter from a particular repository URL
+// Creates a DockerImageRepository from a particular repository URL
 // Note: Is endpoint sufficient? What about authentication parms, for example?
-func NewDockerImageImporter(endpoint url.URL) (DockerImageImporter, error) {
+func NewDockerImageRepository(endpoint DockerSource) (DockerImageRepository, error) {
 	return nil, nil
+}
+
+type DockerSource struct {
+	// whatever data is needed to connect to a docker repo
 }
 
 // A RocketImage is an Image which also records Rocket image metadata.
@@ -63,15 +67,15 @@ type RocketMetadata struct {
 	// Note: TBD
 }
 
-// RocketImageImporter creates a RocketImage from a Rocket repository (or some such).
-type RocketImageImporter interface {
+// RocketImageRepository represents a connection to a Rocket Image Repository.
+type RocketImageRepository interface {
 	// Import creates a RocketImage from this importer.
 	// Note: parameters?
 	Import() (RocketImage, error)
 }
 
-// Creates a RocketImageImporter.
-func NewRocketImageImporter( /* TBD */ ) (RocketImageImporter, error) {
+// Creates a RocketImageRepository.
+func NewRocketImageRepository( /* TBD */ ) (RocketImageRepository, error) {
 	return nil, nil
 }
 
