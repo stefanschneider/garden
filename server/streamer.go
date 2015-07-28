@@ -1,9 +1,11 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type StreamServer struct {
@@ -13,6 +15,8 @@ type StreamServer struct {
 	stdouts map[uint32]chan []byte
 	stderrs map[uint32]chan []byte
 	done    map[uint32]chan struct{}
+
+	streamers sync.WaitGroup
 }
 
 func NewSteamServer() *StreamServer {
@@ -32,6 +36,10 @@ func (m *StreamServer) handleStderr(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *StreamServer) handleStream(w http.ResponseWriter, r *http.Request, streams map[uint32]chan []byte) {
+	m.streamers.Add(1)
+	defer m.streamers.Done()
+
+	fmt.Println("HANDLE ")
 	streamid, err := strconv.Atoi(r.FormValue(":streamid"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -92,4 +100,12 @@ func (m *StreamServer) stop(id uint32) {
 	defer m.mu.RUnlock()
 
 	close(m.done[id])
+
+	go func() {
+		<-time.After(10 * time.Second) // allow clients 60 seconds to connect
+		m.streamers.Wait()
+
+		delete(m.stdouts, id)
+		delete(m.stderrs, id)
+	}()
 }

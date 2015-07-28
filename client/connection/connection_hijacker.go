@@ -40,6 +40,7 @@ func NewHijackStreamer(network, address string) HijackStreamer {
 }
 
 func (h *hijackable) Hijack(handler string, body io.Reader, params rata.Params, query url.Values, contentType string) (net.Conn, *bufio.Reader, error) {
+	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!! HIJACK", handler)
 	request, err := h.req.CreateRequest(handler, params, body)
 	if err != nil {
 		return nil, nil, err
@@ -57,6 +58,9 @@ func (h *hijackable) Hijack(handler string, body io.Reader, params rata.Params, 
 	if err != nil {
 		return nil, nil, err
 	}
+
+	f, _ := conn.(*net.UnixConn).File()
+	println("!!!! FD", f.Fd())
 
 	client := httputil.NewClientConn(conn, nil)
 

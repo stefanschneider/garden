@@ -1718,7 +1718,7 @@ var _ = Describe("When a client connects", func() {
 					}
 				})
 
-				It("runs the process and streams the output", func(done Done) {
+				FIt("runs the process and streams the output", func(done Done) {
 					stdout := gbytes.NewBuffer()
 					stderr := gbytes.NewBuffer()
 
@@ -1746,7 +1746,7 @@ var _ = Describe("When a client connects", func() {
 					Ω(err).Should(Equal(io.EOF))
 
 					close(done)
-				})
+				}, 3)
 
 				itResetsGraceTimeWhenHandling(func() {
 					process, err := container.Run(processSpec, garden.ProcessIO{

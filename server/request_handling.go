@@ -894,7 +894,7 @@ func (s *GardenServer) handleRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer conn.Close()
+	//defer conn.Close()
 
 	transport.WriteMessage(conn, &transport.ProcessPayload{
 		ProcessID: process.ID(),
