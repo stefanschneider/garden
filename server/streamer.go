@@ -8,45 +8,67 @@ import (
 )
 
 type StreamServer struct {
-	mu     sync.RWMutex
-	nextID uint32
+	mu      sync.RWMutex
+	nextID  uint32
+	streams map[uint32]*s
 
-	stdouts map[uint32]chan []byte
-	stderrs map[uint32]chan []byte
-	done    map[uint32]chan struct{}
-
-	streamers sync.WaitGroup
+	connectWait time.Duration
 }
 
-func NewSteamServer() *StreamServer {
-	return &StreamServer{
-		stdouts: make(map[uint32]chan []byte),
-		stderrs: make(map[uint32]chan []byte),
-		done:    make(map[uint32]chan struct{}),
+type s struct {
+	stdout chan []byte
+	stderr chan []byte
+	done   chan struct{}
+	wg     *sync.WaitGroup
+}
+
+type stdoutOrErr bool
+
+var (
+	Stdout stdoutOrErr = true
+	Stderr stdoutOrErr = false
+)
+
+func (t stdoutOrErr) pick(s *s) chan []byte {
+	if t == Stdout {
+		return s.stdout
+	} else {
+		return s.stderr
 	}
 }
 
-func (m *StreamServer) handleStdout(w http.ResponseWriter, r *http.Request) {
-	m.handleStream(w, r, m.stdouts)
+func NewStreamServer(connectWait time.Duration) *StreamServer {
+	return &StreamServer{
+		streams:     make(map[uint32]*s),
+		connectWait: connectWait,
+	}
 }
 
-func (m *StreamServer) handleStderr(w http.ResponseWriter, r *http.Request) {
-	m.handleStream(w, r, m.stderrs)
+func (m *StreamServer) Stream(stdout, stderr chan []byte) uint32 {
+	m.mu.Lock()
+	streamID := m.nextID
+	m.nextID++
+
+	m.streams[streamID] = &s{
+		stdout: stdout,
+		stderr: stderr,
+		done:   make(chan struct{}),
+		wg:     &sync.WaitGroup{},
+	}
+
+	m.mu.Unlock()
+
+	return streamID
 }
 
-func (m *StreamServer) handleStream(w http.ResponseWriter, r *http.Request, streams map[uint32]chan []byte) {
-	m.streamers.Add(1)
-	defer m.streamers.Done()
-
+func (m *StreamServer) HandleStream(w http.ResponseWriter, r *http.Request, outOrErr stdoutOrErr) {
 	streamid, err := strconv.Atoi(r.FormValue(":streamid"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	stream := uint32(streamid)
 
 	w.WriteHeader(http.StatusOK)
-
 	conn, _, err := w.(http.Hijacker).Hijack()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -56,23 +78,23 @@ func (m *StreamServer) handleStream(w http.ResponseWriter, r *http.Request, stre
 	defer conn.Close()
 
 	m.mu.RLock()
-	ch := streams[stream]
-	done := m.done[stream]
+	stream := m.streams[uint32(streamid)]
+	ch := outOrErr.pick(stream)
 	m.mu.RUnlock()
+
+	stream.wg.Add(1)
+	defer stream.wg.Done()
 
 	for {
 		select {
 		case output := <-ch:
 			conn.Write(output)
-		case <-done:
+		case <-stream.done:
 			for {
 				select {
 				case output := <-ch:
 					conn.Write(output)
 				default:
-					m.mu.Lock()
-					defer m.mu.Unlock()
-					delete(streams, stream)
 					return
 				}
 			}
@@ -80,30 +102,22 @@ func (m *StreamServer) handleStream(w http.ResponseWriter, r *http.Request, stre
 	}
 }
 
-func (m *StreamServer) stream(stdout, stderr chan []byte) uint32 {
-	m.mu.Lock()
-	streamID := m.nextID
-	m.nextID++
-
-	m.stdouts[streamID] = stdout
-	m.stderrs[streamID] = stderr
-	m.done[streamID] = make(chan struct{})
-	m.mu.Unlock()
-
-	return streamID
-}
-
-func (m *StreamServer) stop(id uint32) {
+func (m *StreamServer) Stop(id uint32) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	close(m.done[id])
+	stream := m.streams[id]
+	close(stream.done)
 
 	go func() {
-		<-time.After(60 * time.Second) // allow clients 60 seconds to join the wait group
-		m.streamers.Wait()
-
-		delete(m.stdouts, id)
-		delete(m.stderrs, id)
+		<-time.After(m.connectWait) // allow clients time to join the wait group
+		stream.wg.Wait()            // wait for everyone to finish streaming
+		m.cleanup(id)               // delete stuff from the map now everyone is gone
 	}()
+}
+
+func (m *StreamServer) cleanup(id uint32) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.streams, id)
 }

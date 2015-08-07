@@ -62,7 +62,7 @@ func New(
 		handling: new(sync.WaitGroup),
 		conns:    make(map[net.Conn]net.Conn),
 
-		streamer: NewSteamServer(),
+		streamer: NewStreamServer(60 * time.Second),
 
 		destroys:  make(map[string]struct{}),
 		destroysL: new(sync.Mutex),
@@ -91,14 +91,15 @@ func New(
 		routes.BulkInfo:               http.HandlerFunc(s.handleBulkInfo),
 		routes.BulkMetrics:            http.HandlerFunc(s.handleBulkMetrics),
 		routes.Run:                    http.HandlerFunc(s.handleRun),
-		routes.Stdout:                 http.HandlerFunc(s.streamer.handleStdout),
-		routes.Stderr:                 http.HandlerFunc(s.streamer.handleStderr),
 		routes.Attach:                 http.HandlerFunc(s.handleAttach),
 		routes.Metrics:                http.HandlerFunc(s.handleMetrics),
 		routes.Properties:             http.HandlerFunc(s.handleProperties),
 		routes.Property:               http.HandlerFunc(s.handleProperty),
 		routes.SetProperty:            http.HandlerFunc(s.handleSetProperty),
 		routes.RemoveProperty:         http.HandlerFunc(s.handleRemoveProperty),
+
+		routes.Stdout: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { s.streamer.HandleStream(w, r, Stdout) }),
+		routes.Stderr: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { s.streamer.HandleStream(w, r, Stderr) }),
 	}
 
 	mux, err := rata.NewRouter(routes.Routes, handlers)
