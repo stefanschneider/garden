@@ -19,7 +19,6 @@ type s struct {
 	stdout chan []byte
 	stderr chan []byte
 	done   chan struct{}
-	wg     *sync.WaitGroup
 }
 
 type stdoutOrErr bool
@@ -46,6 +45,8 @@ func NewStreamServer(connectWait time.Duration) *StreamServer {
 
 func (m *StreamServer) Stream(stdout, stderr chan []byte) uint32 {
 	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	streamID := m.nextID
 	m.nextID++
 
@@ -53,10 +54,7 @@ func (m *StreamServer) Stream(stdout, stderr chan []byte) uint32 {
 		stdout: stdout,
 		stderr: stderr,
 		done:   make(chan struct{}),
-		wg:     &sync.WaitGroup{},
 	}
-
-	m.mu.Unlock()
 
 	return streamID
 }
@@ -81,9 +79,6 @@ func (m *StreamServer) HandleStream(w http.ResponseWriter, r *http.Request, outO
 	stream := m.streams[uint32(streamid)]
 	ch := outOrErr.pick(stream)
 	m.mu.RUnlock()
-
-	stream.wg.Add(1)
-	defer stream.wg.Done()
 
 	for {
 		select {
@@ -111,7 +106,6 @@ func (m *StreamServer) Stop(id uint32) {
 
 	go func() {
 		<-time.After(m.connectWait) // allow clients time to join the wait group
-		stream.wg.Wait()            // wait for everyone to finish streaming
 		m.cleanup(id)               // delete stuff from the map now everyone is gone
 	}()
 }

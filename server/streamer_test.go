@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"runtime/pprof"
