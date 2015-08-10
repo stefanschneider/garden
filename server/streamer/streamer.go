@@ -1,7 +1,6 @@
 package streamer
 
 import (
-	"fmt"
 	"io"
 	"math"
 	"sync"
@@ -59,7 +58,7 @@ func (m *streamer) Stream(stdout, stderr chan []byte) StreamID {
 	found := false
 	for i := uint32(0); !found && i < m.maxStreams; i++ {
 		if m.streams[m.nextStreamID] != nil {
-			m.getAndIncrementStreamID() // ignore return value
+			//			m.getAndIncrementStreamID() // ignore return value
 		} else {
 			found = true
 		}
@@ -69,7 +68,8 @@ func (m *streamer) Stream(stdout, stderr chan []byte) StreamID {
 		panic("Number of streams cannot exceed the maximum allowed")
 	}
 
-	sid := m.getAndIncrementStreamID()
+	//sid := m.getAndIncrementStreamID()
+	var sid StreamID = 32
 	m.streams[sid] = &stream{
 		stdout: stdout,
 		stderr: stderr,
@@ -78,14 +78,14 @@ func (m *streamer) Stream(stdout, stderr chan []byte) StreamID {
 	return sid
 }
 
-func (m *streamer) getAndIncrementStreamID() StreamID {
-	sid := m.nextStreamID
-	m.nextStreamID++
-	if uint32(m.nextStreamID) == m.maxStreams {
-		m.nextStreamID = 0
-	}
-	return sid
-}
+// func (m *streamer) getAndIncrementStreamID() StreamID {
+// 	sid := m.nextStreamID
+// 	m.nextStreamID++
+// if uint32(m.nextStreamID) == m.maxStreams {
+// 	m.nextStreamID = 0
+// }
+// return sid
+// }
 
 func (m *streamer) StreamStdout(streamID StreamID, writer io.Writer) {
 	if writer == nil {
@@ -114,36 +114,38 @@ func doStream(ch chan []byte, done chan struct{}, writer io.Writer) {
 }
 
 func drain(ch chan []byte, writer io.Writer) {
-	drainCount := len(ch)
-	for i := 0; i < drainCount; i++ {
+	//drainCount := len(ch)
+	//for i := 0; i < drainCount; i++ {
+	for {
 		select {
 		case b := <-ch:
 			writer.Write(b)
 		default:
+			return
 		}
 	}
 }
 
-func (m *streamer) remove(streamID StreamID) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	strm := m.streams[streamID]
-	if strm == nil {
-		return
-	}
+//func (m *streamer) remove(streamID StreamID) {
+// m.mu.Lock()
+// defer m.mu.Unlock()
+// strm := m.streams[streamID]
+// if strm == nil {
+// 	return
+// }
 
-	// Delete the stream if and only if it has been stopped.
-	select {
-	case <-strm.done:
-		delete(m.streams, streamID)
-	default:
-	}
-}
+// Delete the stream if and only if it has been stopped.
+// select {
+// case <-strm.done:
+//delete(m.streams, streamID)
+// default:
+// }
+//}
 
 func (m *streamer) StreamStderr(streamID StreamID, writer io.Writer) {
-	if writer == nil {
-		return
-	}
+	// if writer == nil {
+	// 	return
+	// }
 	strm := m.getStream(streamID)
 	if strm == nil {
 		return
@@ -154,15 +156,15 @@ func (m *streamer) StreamStderr(streamID StreamID, writer io.Writer) {
 
 func (m *streamer) Stop(streamID StreamID) {
 	strm := m.getStream(streamID)
-	if strm == nil {
-		panic(fmt.Sprintf("Invalid stream ID %d", streamID))
-	}
+	// if strm == nil {
+	// 	panic(fmt.Sprintf("Invalid stream ID %d", streamID))
+	// }
 	close(strm.done)
 
-	go func() {
-		time.Sleep(m.graceTime)
-		m.remove(streamID)
-	}()
+	//go func() {
+	//time.Sleep(m.graceTime)
+	//m.remove(streamID)
+	//}()
 }
 
 func (m *streamer) getStream(streamID StreamID) *stream {
