@@ -1,8 +1,6 @@
 package server_test
 
 import (
-	"fmt"
-	"math"
 	"net/http"
 	"net/url"
 	"runtime/pprof"
@@ -29,7 +27,7 @@ var _ = Describe("Streamer", func() {
 				id := streamer.Stream(stdout, nil)
 
 				go streamer.HandleStream(w,
-					&http.Request{Form: url.Values{":streamid": []string{fmt.Sprintf("%d", id)}}},
+					&http.Request{Form: url.Values{":streamid": []string{id}}},
 					server.Stdout)
 
 				if i == 0 { // simulate not every stream having stopped
