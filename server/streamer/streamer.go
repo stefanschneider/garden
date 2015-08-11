@@ -49,8 +49,8 @@ type streamer struct {
 }
 
 type stream struct {
-	stdout, stderr chan []byte
-	done           chan struct{}
+	ch   [2]chan []byte
+	done chan struct{}
 }
 
 func (m *streamer) Stream(stdout, stderr chan []byte) StreamID {
@@ -71,9 +71,8 @@ func (m *streamer) Stream(stdout, stderr chan []byte) StreamID {
 
 	sid := m.getAndIncrementStreamID()
 	m.streams[sid] = &stream{
-		stdout: stdout,
-		stderr: stderr,
-		done:   make(chan struct{}),
+		ch:   [2]chan []byte{stdout, stderr},
+		done: make(chan struct{}),
 	}
 	return sid
 }
@@ -88,6 +87,14 @@ func (m *streamer) getAndIncrementStreamID() StreamID {
 }
 
 func (m *streamer) StreamStdout(streamID StreamID, writer io.Writer) {
+	m.doStream(streamID, writer, 0)
+}
+
+func (m *streamer) StreamStderr(streamID StreamID, writer io.Writer) {
+	m.doStream(streamID, writer, 1)
+}
+
+func (m *streamer) doStream(streamID StreamID, writer io.Writer, chanIndex int) {
 	if writer == nil {
 		return
 	}
@@ -96,10 +103,10 @@ func (m *streamer) StreamStdout(streamID StreamID, writer io.Writer) {
 		return
 	}
 
-	doStream(strm.stdout, strm.done, writer)
+	streamUntilStopped(strm.ch[chanIndex], strm.done, writer)
 }
 
-func doStream(ch chan []byte, done chan struct{}, writer io.Writer) {
+func streamUntilStopped(ch chan []byte, done chan struct{}, writer io.Writer) {
 	for {
 		select {
 		case b := <-ch:
@@ -122,18 +129,6 @@ func drain(ch chan []byte, writer io.Writer) {
 		default:
 		}
 	}
-}
-
-func (m *streamer) StreamStderr(streamID StreamID, writer io.Writer) {
-	if writer == nil {
-		return
-	}
-	strm := m.getStream(streamID)
-	if strm == nil {
-		return
-	}
-
-	doStream(strm.stderr, strm.done, writer)
 }
 
 func (m *streamer) Stop(streamID StreamID) {
