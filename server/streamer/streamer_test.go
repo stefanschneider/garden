@@ -19,9 +19,8 @@ var _ = Describe("Streamer", func() {
 	const testString = "x"
 
 	var (
-		maxStreams uint32
-		graceTime  time.Duration
-		str        streamer.Streamer
+		graceTime time.Duration
+		str       streamer.Streamer
 
 		stdoutChan        chan []byte
 		stderrChan        chan []byte
@@ -30,13 +29,12 @@ var _ = Describe("Streamer", func() {
 	)
 
 	JustBeforeEach(func() {
-		str = streamer.NewLimited(graceTime, maxStreams)
+		str = streamer.New(graceTime)
 		stdoutChan = make(chan []byte, channelBufferSize)
 		stderrChan = make(chan []byte, channelBufferSize)
 	})
 
 	BeforeEach(func() {
-		maxStreams = 10
 		graceTime = 10 * time.Second
 		channelBufferSize = 1
 
@@ -67,7 +65,7 @@ var _ = Describe("Streamer", func() {
 
 	It("should return and not panic when asked to stream output with an invalid stream ID", func() {
 		w := new(bytes.Buffer)
-		str.StreamStdout(0, w)
+		str.StreamStdout("", w)
 	})
 
 	It("should return and not panic when asked to stream output with a nil writer", func() {
@@ -102,7 +100,7 @@ var _ = Describe("Streamer", func() {
 
 	It("should return and not panic when asked to stream errors with an invalid stream ID", func() {
 		w := new(bytes.Buffer)
-		str.StreamStderr(0, w)
+		str.StreamStderr("", w)
 	})
 
 	It("should return and not panic when asked to stream errors with a nil writer", func() {
@@ -114,7 +112,7 @@ var _ = Describe("Streamer", func() {
 	})
 
 	It("should panic when asked to stop with an invalid stream ID", func() {
-		Expect(func() { str.Stop(0) }).To(Panic())
+		Expect(func() { str.Stop("") }).To(Panic())
 	})
 
 	Context("when using channels with buffer size greater than one", func() {
@@ -143,20 +141,8 @@ var _ = Describe("Streamer", func() {
 		})
 	})
 
-	Context("when a maximum number of streams has been set", func() {
-		BeforeEach(func() {
-			maxStreams = 0
-
-		})
-
-		It("should panic when the maximum number of streams is about to be exceeded", func() {
-			Expect(func() { str.Stream(stdoutChan, stderrChan) }).To(Panic())
-		})
-	})
-
 	Context("when a grace time has been set", func() {
 		BeforeEach(func() {
-			maxStreams = 1
 			graceTime = 100 * time.Millisecond
 
 		})
@@ -165,7 +151,7 @@ var _ = Describe("Streamer", func() {
 			sid := str.Stream(stdoutChan, stderrChan)
 			str.Stop(sid)
 			time.Sleep(200 * time.Millisecond)
-			Expect(func() { str.Stream(stdoutChan, stderrChan) }).NotTo(Panic())
+			Expect(func() { str.Stop(sid) }).To(Panic(), "stream was not removed")
 		})
 
 		It("should not leak goroutines for longer than the grace time after streaming has been stopped", func() {

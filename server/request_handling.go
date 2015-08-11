@@ -898,7 +898,7 @@ func (s *GardenServer) handleRun(w http.ResponseWriter, r *http.Request) {
 
 	transport.WriteMessage(conn, &transport.ProcessPayload{
 		ProcessID: process.ID(),
-		StreamID:  uint32(streamID),
+		StreamID:  string(streamID),
 	})
 
 	go s.streamInput(json.NewDecoder(br), stdinW, process)
@@ -973,7 +973,7 @@ func (s *GardenServer) handleAttach(w http.ResponseWriter, r *http.Request) {
 
 	transport.WriteMessage(conn, &transport.ProcessPayload{
 		ProcessID: process.ID(),
-		StreamID:  uint32(streamID),
+		StreamID:  string(streamID),
 	})
 
 	go s.streamInput(json.NewDecoder(br), stdinW, process)

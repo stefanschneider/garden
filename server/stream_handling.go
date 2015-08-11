@@ -3,7 +3,6 @@ package server
 import (
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/cloudfoundry-incubator/garden/server/streamer"
 )
@@ -25,19 +24,13 @@ func (s *GardenServer) handleStderr(w http.ResponseWriter, r *http.Request) {
 }
 
 func streamInfo(w http.ResponseWriter, r *http.Request) (streamer.StreamID, io.WriteCloser) {
-	streamID, err := strconv.Atoi(r.FormValue(":streamid"))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return 0, nil
-	}
-	stream := streamer.StreamID(streamID)
-
+	stream := streamer.StreamID(r.FormValue(":streamid"))
 	w.WriteHeader(http.StatusOK)
 
 	conn, _, err := w.(http.Hijacker).Hijack()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		return 0, nil
+		return "", nil
 	}
 
 	return stream, conn

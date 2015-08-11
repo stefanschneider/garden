@@ -3,13 +3,12 @@ package streamer
 import (
 	"fmt"
 	"io"
-	"math"
 	"sync"
 	"time"
 )
 
 // StreamID identifies a pair of standard output and error channels used for streaming.
-type StreamID uint32
+type StreamID string
 
 type Streamer interface {
 	// Stream sets up streaming for the given pair of channels and returns a StreamID to identify the pair.
@@ -28,23 +27,16 @@ type Streamer interface {
 
 // New creates a Streamer with the specified grace time which limits the duration of memory consumption by a stopped stream.
 func New(graceTime time.Duration) Streamer {
-	return NewLimited(graceTime, math.MaxUint32)
-}
-
-// NewLimited creates a Streamer with the specified grace time (as described in New()) and maximum number of streams.
-func NewLimited(graceTime time.Duration, maxStreams uint32) Streamer {
 	return &streamer{
-		graceTime:  graceTime,
-		maxStreams: maxStreams,
-		streams:    make(map[StreamID]*stream),
+		graceTime: graceTime,
+		streams:   make(map[StreamID]*stream),
 	}
 }
 
 type streamer struct {
 	mu           sync.Mutex
-	nextStreamID StreamID
+	nextStreamID uint64
 	graceTime    time.Duration
-	maxStreams   uint32
 	streams      map[StreamID]*stream
 }
 
@@ -56,32 +48,13 @@ type stream struct {
 func (m *streamer) Stream(stdout, stderr chan []byte) StreamID {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	found := false
-	for i := uint32(0); !found && i < m.maxStreams; i++ {
-		if m.streams[m.nextStreamID] != nil {
-			m.getAndIncrementStreamID() // ignore return value
-		} else {
-			found = true
-		}
-	}
 
-	if !found {
-		panic("Number of streams cannot exceed the maximum allowed")
-	}
+	var sid StreamID = StreamID(fmt.Sprintf("%d", m.nextStreamID))
+	m.nextStreamID++
 
-	sid := m.getAndIncrementStreamID()
 	m.streams[sid] = &stream{
 		ch:   [2]chan []byte{stdout, stderr},
 		done: make(chan struct{}),
-	}
-	return sid
-}
-
-func (m *streamer) getAndIncrementStreamID() StreamID {
-	sid := m.nextStreamID
-	m.nextStreamID++
-	if uint32(m.nextStreamID) == m.maxStreams {
-		m.nextStreamID = 0
 	}
 	return sid
 }
