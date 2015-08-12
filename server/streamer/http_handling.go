@@ -5,9 +5,9 @@ import (
 	"net/http"
 )
 
-type HttpHandler func(StreamID, io.Writer)
+type HandlerFunc func(StreamID, io.Writer)
 
-func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h HandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := StreamID(r.FormValue(":streamid"))
 	w.WriteHeader(http.StatusOK)
 

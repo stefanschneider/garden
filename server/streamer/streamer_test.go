@@ -52,6 +52,7 @@ var _ = Describe("Streamer", func() {
 		str.Stop(sid)
 	})
 
+	// The following test will not reliably fail if the implementation fails to drain messages.
 	It("should stream the remaining standard output messages after being stopped", func() {
 		sid := str.Stream(stdoutChan, stderrChan)
 		str.Stop(sid)
@@ -73,6 +74,7 @@ var _ = Describe("Streamer", func() {
 		str.Stop(sid)
 	})
 
+	// The following test will not reliably fail if the implementation fails to drain messages.
 	It("should stream the remaining standard error messages after being stopped", func() {
 		sid := str.Stream(stdoutChan, stderrChan)
 		str.Stop(sid)
