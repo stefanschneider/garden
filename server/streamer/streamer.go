@@ -57,18 +57,15 @@ func (m *Streamer) StreamStderr(streamID StreamID, writer io.Writer) {
 }
 
 func (m *Streamer) doStream(streamID StreamID, writer io.Writer, chanIndex int) {
-	if writer == nil {
-		return
-	}
 	strm := m.getStream(streamID)
 	if strm == nil {
 		return
 	}
 
-	streamUntilStopped(strm.ch[chanIndex], strm.done, writer)
+	streamAndDrain(strm.ch[chanIndex], strm.done, writer)
 }
 
-func streamUntilStopped(ch chan []byte, done chan struct{}, writer io.Writer) {
+func streamAndDrain(ch chan []byte, done chan struct{}, writer io.Writer) {
 	for {
 		select {
 		case b := <-ch:
@@ -83,12 +80,12 @@ func streamUntilStopped(ch chan []byte, done chan struct{}, writer io.Writer) {
 }
 
 func drain(ch chan []byte, writer io.Writer) {
-	drainCount := len(ch)
-	for i := 0; i < drainCount; i++ {
+	for {
 		select {
 		case b := <-ch:
 			writer.Write(b)
 		default:
+			return
 		}
 	}
 }

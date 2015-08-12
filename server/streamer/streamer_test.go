@@ -68,14 +68,6 @@ var _ = Describe("Streamer", func() {
 		str.StreamStdout("", w)
 	})
 
-	It("should return and not panic when asked to stream output with a nil writer", func() {
-		var w io.Writer
-		sid := str.Stream(stdoutChan, stderrChan)
-		str.Stop(sid)
-		stdoutChan <- testByteSlice
-		str.StreamStdout(sid, w)
-	})
-
 	It("should stream standard error until it is stopped", func() {
 		sid := str.Stream(stdoutChan, stderrChan)
 		w := &syncBuffer{
@@ -120,7 +112,7 @@ var _ = Describe("Streamer", func() {
 			channelBufferSize = 2
 		})
 
-		It("should finish streaming currently buffered standard output after being stopped", func() {
+		It("should finish streaming standard output after being stopped", func() {
 			sid := str.Stream(stdoutChan, stderrChan)
 			str.Stop(sid)
 			w := new(bytes.Buffer)
@@ -130,7 +122,7 @@ var _ = Describe("Streamer", func() {
 			Consistently(w.String).Should(Equal("xx"))
 		})
 
-		It("should finish streaming currently buffered standard error after being stopped", func() {
+		It("should finish streaming standard error after being stopped", func() {
 			sid := str.Stream(stdoutChan, stderrChan)
 			str.Stop(sid)
 			w := new(bytes.Buffer)
