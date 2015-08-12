@@ -3,7 +3,6 @@ package streamer_test
 import (
 	"bytes"
 	"errors"
-	"io"
 	"sync"
 	"time"
 
@@ -53,14 +52,13 @@ var _ = Describe("Streamer", func() {
 		str.Stop(sid)
 	})
 
-	It("should stream just one standard output message after being stopped", func() {
+	It("should stream the remaining standard output messages after being stopped", func() {
 		sid := str.Stream(stdoutChan, stderrChan)
 		str.Stop(sid)
 		w := new(bytes.Buffer)
 		stdoutChan <- testByteSlice
 		str.ServeStdout(sid, w)
-		stdoutChan <- testByteSlice
-		Consistently(w.String).Should(Equal(testString))
+		Expect(w.String()).To(Equal(testString))
 	})
 
 	It("should stream standard error until it is stopped", func() {
@@ -75,52 +73,13 @@ var _ = Describe("Streamer", func() {
 		str.Stop(sid)
 	})
 
-	It("should stream just one standard error message after being stopped", func() {
+	It("should stream the remaining standard error messages after being stopped", func() {
 		sid := str.Stream(stdoutChan, stderrChan)
 		str.Stop(sid)
 		w := new(bytes.Buffer)
 		stderrChan <- testByteSlice
 		str.ServeStderr(sid, w)
-		stderrChan <- testByteSlice
 		Consistently(w.String).Should(Equal(testString))
-	})
-
-	It("should return and not panic when asked to stream errors with a nil writer", func() {
-		var w io.Writer
-		sid := str.Stream(stdoutChan, stderrChan)
-		str.Stop(sid)
-		stdoutChan <- testByteSlice
-		str.ServeStderr(sid, w)
-	})
-
-	It("should panic when asked to stop with an invalid stream ID", func() {
-		Expect(func() { str.Stop("") }).To(Panic())
-	})
-
-	Context("when using channels with buffer size greater than one", func() {
-		BeforeEach(func() {
-			channelBufferSize = 2
-		})
-
-		It("should finish streaming standard output after being stopped", func() {
-			sid := str.Stream(stdoutChan, stderrChan)
-			str.Stop(sid)
-			w := new(bytes.Buffer)
-			stdoutChan <- testByteSlice
-			stdoutChan <- testByteSlice
-			str.ServeStdout(sid, w)
-			Consistently(w.String).Should(Equal("xx"))
-		})
-
-		It("should finish streaming standard error after being stopped", func() {
-			sid := str.Stream(stdoutChan, stderrChan)
-			str.Stop(sid)
-			w := new(bytes.Buffer)
-			stderrChan <- testByteSlice
-			stderrChan <- testByteSlice
-			str.ServeStderr(sid, w)
-			Consistently(w.String).Should(Equal("xx"))
-		})
 	})
 
 	Context("when a grace time has been set", func() {
