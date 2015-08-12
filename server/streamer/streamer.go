@@ -30,6 +30,13 @@ type stream struct {
 	done chan struct{}
 }
 
+type stdoutOrErr int
+
+const (
+	stdout stdoutOrErr = 0
+	stderr stdoutOrErr = 1
+)
+
 // Stream sets up streaming for the given pair of channels and returns a StreamID to identify the pair.
 // The caller must call Stop to avoid leaking memory.
 func (m *Streamer) Stream(stdout, stderr chan []byte) StreamID {
@@ -47,32 +54,29 @@ func (m *Streamer) Stream(stdout, stderr chan []byte) StreamID {
 }
 
 // StreamStdout streams to the specified writer from the standard output channel of the specified pair of channels.
-func (m *Streamer) StreamStdout(streamID StreamID, writer io.Writer) {
-	m.doStream(streamID, writer, 0)
+func (m *Streamer) ServeStdout(streamID StreamID, writer io.Writer) {
+	m.serve(streamID, writer, stdout)
 }
 
 // StreamStderr streams to the specified writer from the standard error channel of the specified pair of channels.
-func (m *Streamer) StreamStderr(streamID StreamID, writer io.Writer) {
-	m.doStream(streamID, writer, 1)
+func (m *Streamer) ServeStderr(streamID StreamID, writer io.Writer) {
+	m.serve(streamID, writer, stderr)
 }
 
-func (m *Streamer) doStream(streamID StreamID, writer io.Writer, chanIndex int) {
+func (m *Streamer) serve(streamID StreamID, writer io.Writer, chanIndex stdoutOrErr) {
 	strm := m.getStream(streamID)
 	if strm == nil {
 		return
 	}
 
-	streamAndDrain(strm.ch[chanIndex], strm.done, writer)
-}
-
-func streamAndDrain(ch chan []byte, done chan struct{}, writer io.Writer) {
+	ch := strm.ch[chanIndex]
 	for {
 		select {
 		case b := <-ch:
 			if _, err := writer.Write(b); err != nil {
 				return
 			}
-		case <-done:
+		case <-strm.done:
 			drain(ch, writer)
 			return
 		}

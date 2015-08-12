@@ -46,7 +46,7 @@ var _ = Describe("Streamer", func() {
 		w := &syncBuffer{
 			Buffer: new(bytes.Buffer),
 		}
-		go str.StreamStdout(sid, w)
+		go str.ServeStdout(sid, w)
 		stdoutChan <- testByteSlice
 		stdoutChan <- testByteSlice
 		Eventually(w.String).Should(Equal("xx"))
@@ -58,14 +58,14 @@ var _ = Describe("Streamer", func() {
 		str.Stop(sid)
 		w := new(bytes.Buffer)
 		stdoutChan <- testByteSlice
-		str.StreamStdout(sid, w)
+		str.ServeStdout(sid, w)
 		stdoutChan <- testByteSlice
 		Consistently(w.String).Should(Equal(testString))
 	})
 
 	It("should return and not panic when asked to stream output with an invalid stream ID", func() {
 		w := new(bytes.Buffer)
-		str.StreamStdout("", w)
+		str.ServeStdout("", w)
 	})
 
 	It("should stream standard error until it is stopped", func() {
@@ -73,7 +73,7 @@ var _ = Describe("Streamer", func() {
 		w := &syncBuffer{
 			Buffer: new(bytes.Buffer),
 		}
-		go str.StreamStderr(sid, w)
+		go str.ServeStderr(sid, w)
 		stderrChan <- testByteSlice
 		stderrChan <- testByteSlice
 		Eventually(w.String).Should(Equal("xx"))
@@ -85,14 +85,14 @@ var _ = Describe("Streamer", func() {
 		str.Stop(sid)
 		w := new(bytes.Buffer)
 		stderrChan <- testByteSlice
-		str.StreamStderr(sid, w)
+		str.ServeStderr(sid, w)
 		stderrChan <- testByteSlice
 		Consistently(w.String).Should(Equal(testString))
 	})
 
 	It("should return and not panic when asked to stream errors with an invalid stream ID", func() {
 		w := new(bytes.Buffer)
-		str.StreamStderr("", w)
+		str.ServeStderr("", w)
 	})
 
 	It("should return and not panic when asked to stream errors with a nil writer", func() {
@@ -100,7 +100,7 @@ var _ = Describe("Streamer", func() {
 		sid := str.Stream(stdoutChan, stderrChan)
 		str.Stop(sid)
 		stdoutChan <- testByteSlice
-		str.StreamStderr(sid, w)
+		str.ServeStderr(sid, w)
 	})
 
 	It("should panic when asked to stop with an invalid stream ID", func() {
@@ -118,7 +118,7 @@ var _ = Describe("Streamer", func() {
 			w := new(bytes.Buffer)
 			stdoutChan <- testByteSlice
 			stdoutChan <- testByteSlice
-			str.StreamStdout(sid, w)
+			str.ServeStdout(sid, w)
 			Consistently(w.String).Should(Equal("xx"))
 		})
 
@@ -128,7 +128,7 @@ var _ = Describe("Streamer", func() {
 			w := new(bytes.Buffer)
 			stderrChan <- testByteSlice
 			stderrChan <- testByteSlice
-			str.StreamStderr(sid, w)
+			str.ServeStderr(sid, w)
 			Consistently(w.String).Should(Equal("xx"))
 		})
 	})
@@ -164,7 +164,7 @@ var _ = Describe("Streamer", func() {
 			Buffer: new(bytes.Buffer),
 			fail:   true,
 		}
-		go str.StreamStdout(sid, w)
+		go str.ServeStdout(sid, w)
 		stdoutChan <- testByteSlice
 		stdoutChan <- testByteSlice
 		Consistently(w.String).Should(Equal(""))
@@ -177,7 +177,7 @@ var _ = Describe("Streamer", func() {
 			Buffer: new(bytes.Buffer),
 			fail:   true,
 		}
-		go str.StreamStderr(sid, w)
+		go str.ServeStderr(sid, w)
 		stderrChan <- testByteSlice
 		stderrChan <- testByteSlice
 		Consistently(w.String).Should(Equal(""))
