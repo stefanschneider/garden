@@ -19,7 +19,7 @@ func New(graceTime time.Duration) *Streamer {
 }
 
 type Streamer struct {
-	mu           sync.Mutex
+	mu           sync.RWMutex
 	nextStreamID uint64
 	graceTime    time.Duration
 	streams      map[StreamID]*stream
@@ -107,7 +107,7 @@ func (m *Streamer) Stop(streamID StreamID) {
 }
 
 func (m *Streamer) getStream(streamID StreamID) *stream {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.streams[streamID]
 }
