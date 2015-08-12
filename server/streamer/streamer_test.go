@@ -63,11 +63,6 @@ var _ = Describe("Streamer", func() {
 		Consistently(w.String).Should(Equal(testString))
 	})
 
-	It("should return and not panic when asked to stream output with an invalid stream ID", func() {
-		w := new(bytes.Buffer)
-		str.ServeStdout("", w)
-	})
-
 	It("should stream standard error until it is stopped", func() {
 		sid := str.Stream(stdoutChan, stderrChan)
 		w := &syncBuffer{
@@ -88,11 +83,6 @@ var _ = Describe("Streamer", func() {
 		str.ServeStderr(sid, w)
 		stderrChan <- testByteSlice
 		Consistently(w.String).Should(Equal(testString))
-	})
-
-	It("should return and not panic when asked to stream errors with an invalid stream ID", func() {
-		w := new(bytes.Buffer)
-		str.ServeStderr("", w)
 	})
 
 	It("should return and not panic when asked to stream errors with a nil writer", func() {

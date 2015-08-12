@@ -50,6 +50,7 @@ func (m *Streamer) Stream(stdout, stderr chan []byte) StreamID {
 		ch:   [2]chan []byte{stdout, stderr},
 		done: make(chan struct{}),
 	}
+
 	return sid
 }
 
@@ -64,10 +65,7 @@ func (m *Streamer) ServeStderr(streamID StreamID, writer io.Writer) {
 }
 
 func (m *Streamer) serve(streamID StreamID, writer io.Writer, chanIndex stdoutOrErr) {
-	strm := m.getStream(streamID)
-	if strm == nil {
-		return
-	}
+	strm := m.streamFromID(streamID)
 
 	ch := strm.ch[chanIndex]
 	for {
@@ -96,21 +94,21 @@ func drain(ch chan []byte, writer io.Writer) {
 
 // Stop stops streaming from the specified pair of channels.
 func (m *Streamer) Stop(streamID StreamID) {
-	strm := m.getStream(streamID)
-	if strm == nil {
-		panic(fmt.Sprintf("Invalid stream ID %d", streamID))
-	}
+	strm := m.streamFromID(streamID)
 	close(strm.done)
 
 	go func() {
+		// wait some time to ensure clients have connected, once they've
+		// retrieved the stream from the map it's safe to delete the key
 		time.Sleep(m.graceTime)
+
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		delete(m.streams, streamID)
 	}()
 }
 
-func (m *Streamer) getStream(streamID StreamID) *stream {
+func (m *Streamer) streamFromID(streamID StreamID) *stream {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.streams[streamID]
