@@ -20,7 +20,7 @@ var _ = Describe("Streamer", func() {
 
 	var (
 		graceTime time.Duration
-		str       streamer.Streamer
+		str       *streamer.Streamer
 
 		stdoutChan        chan []byte
 		stderrChan        chan []byte

@@ -37,7 +37,7 @@ type GardenServer struct {
 	conns map[net.Conn]net.Conn
 	mu    sync.Mutex
 
-	streamer streamer.Streamer
+	streamer *streamer.Streamer
 
 	destroys  map[string]struct{}
 	destroysL *sync.Mutex

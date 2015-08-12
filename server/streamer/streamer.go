@@ -10,30 +10,15 @@ import (
 // StreamID identifies a pair of standard output and error channels used for streaming.
 type StreamID string
 
-type Streamer interface {
-	// Stream sets up streaming for the given pair of channels and returns a StreamID to identify the pair.
-	// The caller must call Stop to avoid leaking memory.
-	Stream(stdout, stderr chan []byte) StreamID
-
-	// StreamStdout streams to the specified writer from the standard output channel of the specified pair of channels.
-	StreamStdout(StreamID, io.Writer)
-
-	// StreamStderr streams to the specified writer from the standard error channel of the specified pair of channels.
-	StreamStderr(StreamID, io.Writer)
-
-	// Stop stops streaming from the specified pair of channels.
-	Stop(StreamID)
-}
-
 // New creates a Streamer with the specified grace time which limits the duration of memory consumption by a stopped stream.
-func New(graceTime time.Duration) Streamer {
-	return &streamer{
+func New(graceTime time.Duration) *Streamer {
+	return &Streamer{
 		graceTime: graceTime,
 		streams:   make(map[StreamID]*stream),
 	}
 }
 
-type streamer struct {
+type Streamer struct {
 	mu           sync.Mutex
 	nextStreamID uint64
 	graceTime    time.Duration
@@ -45,7 +30,9 @@ type stream struct {
 	done chan struct{}
 }
 
-func (m *streamer) Stream(stdout, stderr chan []byte) StreamID {
+// Stream sets up streaming for the given pair of channels and returns a StreamID to identify the pair.
+// The caller must call Stop to avoid leaking memory.
+func (m *Streamer) Stream(stdout, stderr chan []byte) StreamID {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -59,15 +46,17 @@ func (m *streamer) Stream(stdout, stderr chan []byte) StreamID {
 	return sid
 }
 
-func (m *streamer) StreamStdout(streamID StreamID, writer io.Writer) {
+// StreamStdout streams to the specified writer from the standard output channel of the specified pair of channels.
+func (m *Streamer) StreamStdout(streamID StreamID, writer io.Writer) {
 	m.doStream(streamID, writer, 0)
 }
 
-func (m *streamer) StreamStderr(streamID StreamID, writer io.Writer) {
+// StreamStderr streams to the specified writer from the standard error channel of the specified pair of channels.
+func (m *Streamer) StreamStderr(streamID StreamID, writer io.Writer) {
 	m.doStream(streamID, writer, 1)
 }
 
-func (m *streamer) doStream(streamID StreamID, writer io.Writer, chanIndex int) {
+func (m *Streamer) doStream(streamID StreamID, writer io.Writer, chanIndex int) {
 	if writer == nil {
 		return
 	}
@@ -104,7 +93,8 @@ func drain(ch chan []byte, writer io.Writer) {
 	}
 }
 
-func (m *streamer) Stop(streamID StreamID) {
+// Stop stops streaming from the specified pair of channels.
+func (m *Streamer) Stop(streamID StreamID) {
 	strm := m.getStream(streamID)
 	if strm == nil {
 		panic(fmt.Sprintf("Invalid stream ID %d", streamID))
@@ -119,7 +109,7 @@ func (m *streamer) Stop(streamID StreamID) {
 	}()
 }
 
-func (m *streamer) getStream(streamID StreamID) *stream {
+func (m *Streamer) getStream(streamID StreamID) *stream {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.streams[streamID]
