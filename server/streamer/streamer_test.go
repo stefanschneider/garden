@@ -3,6 +3,7 @@ package streamer_test
 import (
 	"bytes"
 	"errors"
+	"io"
 	"sync"
 	"time"
 
@@ -52,16 +53,6 @@ var _ = Describe("Streamer", func() {
 		str.Stop(sid)
 	})
 
-	// The following test will not reliably fail if the implementation fails to drain messages.
-	It("should stream the remaining standard output messages after being stopped", func() {
-		sid := str.Stream(stdoutChan, stderrChan)
-		str.Stop(sid)
-		w := new(bytes.Buffer)
-		stdoutChan <- testByteSlice
-		str.ServeStdout(sid, w)
-		Expect(w.String()).To(Equal(testString))
-	})
-
 	It("should stream standard error until it is stopped", func() {
 		sid := str.Stream(stdoutChan, stderrChan)
 		w := &syncBuffer{
@@ -74,14 +65,40 @@ var _ = Describe("Streamer", func() {
 		str.Stop(sid)
 	})
 
-	// The following test will not reliably fail if the implementation fails to drain messages.
-	It("should stream the remaining standard error messages after being stopped", func() {
-		sid := str.Stream(stdoutChan, stderrChan)
-		str.Stop(sid)
-		w := new(bytes.Buffer)
-		stderrChan <- testByteSlice
-		str.ServeStderr(sid, w)
-		Consistently(w.String).Should(Equal(testString))
+	Describe("draining", func() {
+		var (
+			drain       streamer.DrainFunc
+			drainCalled chan struct{}
+		)
+
+		JustBeforeEach(func() {
+			drainCalled = make(chan struct{})
+			drain = func(ch chan []byte, writer io.Writer) {
+				close(drainCalled)
+			}
+
+			str = streamer.NewWithDrain(graceTime, drain)
+		})
+
+		It("should call the drain function for standard output after being stopped", func() {
+			sid := str.Stream(stdoutChan, stderrChan)
+			str.Stop(sid)
+			w := &syncBuffer{
+				Buffer: new(bytes.Buffer),
+			}
+			str.ServeStdout(sid, w)
+			Eventually(drainCalled).Should(BeClosed())
+		})
+
+		It("should call the drain function for standard error after being stopped", func() {
+			sid := str.Stream(stdoutChan, stderrChan)
+			str.Stop(sid)
+			w := &syncBuffer{
+				Buffer: new(bytes.Buffer),
+			}
+			str.ServeStderr(sid, w)
+			Eventually(drainCalled).Should(BeClosed())
+		})
 	})
 
 	Context("when a grace time has been set", func() {

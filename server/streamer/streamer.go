@@ -10,10 +10,32 @@ import (
 // StreamID identifies a pair of standard output and error channels used for streaming.
 type StreamID string
 
+type DrainFunc func(chan []byte, io.Writer)
+
 // New creates a Streamer with the specified grace time which limits the duration of memory consumption by a stopped stream.
+// It provides a default drain function which writes the channel content until the channel is empty.
 func New(graceTime time.Duration) *Streamer {
+	return NewWithDrain(graceTime, func(ch chan []byte, writer io.Writer) {
+		for {
+			select {
+			case b := <-ch:
+				writer.Write(b)
+			default:
+				return
+			}
+		}
+	})
 	return &Streamer{
 		graceTime: graceTime,
+		streams:   make(map[StreamID]*stream),
+	}
+}
+
+// NewWithDrainer creates a Streamer with the specified grace time and function to drain each channel after Stop.
+func NewWithDrain(graceTime time.Duration, drain DrainFunc) *Streamer {
+	return &Streamer{
+		graceTime: graceTime,
+		drain:     drain,
 		streams:   make(map[StreamID]*stream),
 	}
 }
@@ -22,6 +44,7 @@ type Streamer struct {
 	mu           sync.RWMutex
 	nextStreamID uint64
 	graceTime    time.Duration
+	drain        DrainFunc
 	streams      map[StreamID]*stream
 }
 
@@ -75,18 +98,7 @@ func (m *Streamer) serve(streamID StreamID, writer io.Writer, chanIndex stdoutOr
 				return
 			}
 		case <-strm.done:
-			drain(ch, writer)
-			return
-		}
-	}
-}
-
-func drain(ch chan []byte, writer io.Writer) {
-	for {
-		select {
-		case b := <-ch:
-			writer.Write(b)
-		default:
+			m.drain(ch, writer)
 			return
 		}
 	}
