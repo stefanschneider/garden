@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 
 	"github.com/cloudfoundry-incubator/garden"
@@ -1754,6 +1755,26 @@ var _ = Describe("When a client connects", func() {
 
 						return process, nil
 					}
+				})
+
+				FIt("should not log any environment variables and command line args", func() {
+					stdout := gbytes.NewBuffer()
+					logger.RegisterSink(lager.NewWriterSink(stdout, lager.DEBUG))
+
+					_, err := container.Run(garden.ProcessSpec{
+						User: "alice",
+						Path: "echo",
+						Args: []string{"-username", "banana"},
+						Env:  []string{"PASSWORD=MY_SECRET"},
+					}, garden.ProcessIO{
+						Stdin:  bytes.NewBufferString("stdin data"),
+						Stdout: GinkgoWriter,
+						Stderr: GinkgoWriter,
+					})
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(stdout).ToNot(gbytes.Say("PASSWORD"))
+					Expect(stdout).ToNot(gbytes.Say("MY_SECRET"))
 				})
 
 				It("runs the process and streams the output", func(done Done) {
