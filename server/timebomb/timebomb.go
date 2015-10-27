@@ -3,6 +3,7 @@ package timebomb
 import (
 	"sync"
 	"time"
+	"fmt"
 )
 
 type TimeBomb struct {
@@ -16,6 +17,7 @@ type TimeBomb struct {
 }
 
 func New(countdown time.Duration, detonate func()) *TimeBomb {
+        fmt.Println("------------------------------------", countdown)
 	return &TimeBomb{
 		countdown: countdown,
 		detonate:  detonate,
@@ -38,7 +40,7 @@ func (b *TimeBomb) Pause() bool {
 	b.timer = nil
 
 	b.pauses++
-
+fmt.Println("--------------------------- TimeBomb pause", b.pauses)
 	if timer == nil {
 		return true
 	}
@@ -71,7 +73,7 @@ func (b *TimeBomb) Unpause() {
 	defer b.lock.Unlock()
 
 	b.pauses--
-
+fmt.Println("---------------------------------------- TimeBomb unpause", b.pauses)
 	if !b.defused && b.pauses == 0 {
 		b.timer = time.AfterFunc(b.countdown, b.detonate)
 	}
