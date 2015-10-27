@@ -74,6 +74,10 @@ func (fake *FakeProcess) Wait() (int, error) {
 	}
 }
 
+func (fake *FakeProcess) Close() error {
+	return nil
+}
+
 func (fake *FakeProcess) WaitCallCount() int {
 	fake.waitMutex.RLock()
 	defer fake.waitMutex.RUnlock()

@@ -286,6 +286,7 @@ func (c *connection) streamProcess(handle string, processIO garden.ProcessIO, hi
 		exitCode, err := streamHandler.wait(decoder)
 		process.exited(exitCode, err)
 	}()
+// hijackedConn.Close()
 
 	return process, nil
 }

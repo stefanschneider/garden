@@ -48,6 +48,10 @@ func (p *process) Signal(signal garden.Signal) error {
 	return p.processInputStream.Signal(signal)
 }
 
+func (p *process) Close() error {
+	return p.processInputStream.Close()
+}
+
 func (p *process) exited(exitStatus int, err error) {
 	p.doneL.L.Lock()
 	p.exitStatus = exitStatus

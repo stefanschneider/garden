@@ -188,6 +188,7 @@ type Process interface {
 	Wait() (int, error)
 	SetTTY(TTYSpec) error
 	Signal(Signal) error
+	Close() error
 }
 
 type Signal int
