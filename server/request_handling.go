@@ -943,7 +943,7 @@ func (s *GardenServer) handleRun(w http.ResponseWriter, r *http.Request) {
 		StreamID:  string(streamID),
 	})
 
-	connCloseCh := make(chan bool, 1)
+	connCloseCh := make(chan struct{}, 1)
 
 	go s.streamInput(json.NewDecoder(br), stdinW, process, connCloseCh)
 
@@ -1014,7 +1014,7 @@ func (s *GardenServer) handleAttach(w http.ResponseWriter, r *http.Request) {
 		StreamID:  string(streamID),
 	})
 
-	connCloseCh := make(chan bool, 1)
+	connCloseCh := make(chan struct{}, 1)
 
 	go s.streamInput(json.NewDecoder(br), stdinW, process, connCloseCh)
 
@@ -1118,12 +1118,12 @@ func (s *GardenServer) readRequest(msg interface{}, w http.ResponseWriter, r *ht
 	return true
 }
 
-func (s *GardenServer) streamInput(decoder *json.Decoder, in *io.PipeWriter, process garden.Process, connCloseCh chan bool) {
+func (s *GardenServer) streamInput(decoder *json.Decoder, in *io.PipeWriter, process garden.Process, connCloseCh chan struct{}) {
 	for {
 		var payload transport.ProcessPayload
 		err := decoder.Decode(&payload)
 		if err != nil {
-			connCloseCh <- true
+			close(connCloseCh)
 			in.CloseWithError(errors.New("Connection closed"))
 			return
 		}
@@ -1171,10 +1171,9 @@ func (s *GardenServer) streamInput(decoder *json.Decoder, in *io.PipeWriter, pro
 	}
 }
 
-func (s *GardenServer) streamProcess(logger lager.Logger, conn net.Conn, process garden.Process, stdinPipe *io.PipeWriter, connCloseCh chan bool) {
+func (s *GardenServer) streamProcess(logger lager.Logger, conn net.Conn, process garden.Process, stdinPipe *io.PipeWriter, connCloseCh chan struct{}) {
 	statusCh := make(chan int, 1)
 	errCh := make(chan error, 1)
-	// connCloseCh := make(chan bool, 1)
 
 	go func() {
 		status, err := process.Wait()
@@ -1193,17 +1192,6 @@ func (s *GardenServer) streamProcess(logger lager.Logger, conn net.Conn, process
 			statusCh <- status
 		}
 	}()
-
-//	go func () {
-//		for {
-//			_, err := conn.Read(make([]byte, 0))
-//			if err != nil {
-//				conn.Close()
-//				connCloseCh <- true
-//				break
-//			}
-//		}
-//	}()
 
 	for {
 		select {
