@@ -1170,6 +1170,7 @@ func (s *GardenServer) streamInput(decoder *json.Decoder, in *io.PipeWriter, pro
 func (s *GardenServer) streamProcess(logger lager.Logger, conn net.Conn, process garden.Process, stdinPipe *io.PipeWriter) {
 	statusCh := make(chan int, 1)
 	errCh := make(chan error, 1)
+	// connCloseCh := make(chan bool, 1)
 
 	go func() {
 		status, err := process.Wait()
@@ -1188,6 +1189,17 @@ func (s *GardenServer) streamProcess(logger lager.Logger, conn net.Conn, process
 			statusCh <- status
 		}
 	}()
+
+//	go func () {
+//		for {
+//			_, err := conn.Read(make([]byte, 0))
+//			if err != nil {
+//				conn.Close()
+//				connCloseCh <- true
+//				break
+//			}
+//		}
+//	}()
 
 	for {
 		select {
