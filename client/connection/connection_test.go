@@ -1007,6 +1007,15 @@ var _ = Describe("Connection", func() {
 								"process_id":  "process-handle",
 								"exit_status": 3,
 							})
+
+							var closePayload map[string]interface{}
+							err = decoder.Decode(&closePayload)
+							Ω(err).ShouldNot(HaveOccurred())
+
+							Ω(closePayload).Should(Equal(map[string]interface{}{
+								"process_id": "process-handle",
+								"source":     float64(transport.Stdin),
+							}))
 						},
 					),
 					stdoutStream("foo-handle", "process-handle", 123, func(conn net.Conn) {
@@ -1483,6 +1492,15 @@ var _ = Describe("Connection", func() {
 								"process_id":  "process-handle",
 								"exit_status": 3,
 							})
+
+							var closePayload map[string]interface{}
+							err = json.NewDecoder(br).Decode(&closePayload)
+							Ω(err).ShouldNot(HaveOccurred())
+
+							Ω(closePayload).Should(Equal(map[string]interface{}{
+								"process_id": "process-handle",
+								"source":     float64(transport.Stdin),
+							}))
 						},
 					),
 					stdoutStream("foo-handle", "process-handle", 123, func(conn net.Conn) {

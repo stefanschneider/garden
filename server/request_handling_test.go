@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -25,10 +24,26 @@ import (
 	"code.cloudfoundry.org/garden/client/connection"
 	fakes "code.cloudfoundry.org/garden/gardenfakes"
 	"code.cloudfoundry.org/garden/server"
+	"code.cloudfoundry.org/localip"
 )
+
+func createTcpGardenListenAddr() string {
+	localPort, err := localip.LocalPort()
+	if err != nil {
+		panic(err)
+	}
+
+	return fmt.Sprintf("127.0.0.1:%d", localPort)
+}
+
+func createGardenListenArgs() (string, string) {
+	return "tcp", createTcpGardenListenAddr()
+}
 
 var _ = Describe("When connecting directly to the server", func() {
 	var (
+		gardenListenNetwork      string
+		gardenListenAddr         string
 		apiServer                *server.GardenServer
 		logger                   *lagertest.TestLogger
 		fakeBackend              *fakes.FakeBackend
@@ -40,6 +55,8 @@ var _ = Describe("When connecting directly to the server", func() {
 	)
 
 	BeforeEach(func() {
+		gardenListenNetwork, gardenListenAddr = createGardenListenArgs()
+
 		logger = lagertest.NewTestLogger("test")
 		sink = lagertest.NewTestSink()
 		logger.RegisterSink(sink)
@@ -82,7 +99,6 @@ var _ = Describe("When connecting directly to the server", func() {
 })
 
 var _ = Describe("When a client connects", func() {
-	var socketPath string
 	var tmpdir string
 
 	var serverBackend *fakes.FakeBackend
@@ -92,11 +108,15 @@ var _ = Describe("When a client connects", func() {
 	var logger *lagertest.TestLogger
 	var sink *lagertest.TestSink
 
+	var gardenListenNetwork string
+	var gardenListenAddr string
 	var apiServer *server.GardenServer
 	var apiClient garden.Client
 	var isRunning bool
 
 	BeforeEach(func() {
+		gardenListenNetwork, gardenListenAddr = createGardenListenArgs()
+
 		logger = lagertest.NewTestLogger("test")
 		sink = lagertest.NewTestSink()
 		logger.RegisterSink(sink)
@@ -105,13 +125,12 @@ var _ = Describe("When a client connects", func() {
 		tmpdir, err = ioutil.TempDir(os.TempDir(), "api-server-test")
 		Ω(err).ShouldNot(HaveOccurred())
 
-		socketPath = path.Join(tmpdir, "api.sock")
 		serverBackend = new(fakes.FakeBackend)
 		serverContainerGraceTime = 42 * time.Second
 
 		apiServer = server.New(
-			"unix",
-			socketPath,
+			gardenListenNetwork,
+			gardenListenAddr,
 			serverContainerGraceTime,
 			serverBackend,
 			logger,
@@ -122,7 +141,7 @@ var _ = Describe("When a client connects", func() {
 
 		isRunning = true
 
-		apiClient = client.New(connection.New("unix", socketPath))
+		apiClient = client.New(connection.New(gardenListenNetwork, gardenListenAddr))
 
 		Eventually(apiClient.Ping).Should(Succeed())
 	})
@@ -170,7 +189,7 @@ var _ = Describe("When a client connects", func() {
 			})
 
 			It("returns an error", func() {
-				Ω(apiClient.Ping()).Should(HaveOccurred())
+				Eventually(apiClient.Ping()).Should(HaveOccurred())
 			})
 		})
 	})
@@ -372,7 +391,7 @@ var _ = Describe("When a client connects", func() {
 
 					apiConnection := connection.NewWithDialerAndLogger(func(string, string) (net.Conn, error) {
 						var err error
-						clientConnection, err = net.DialTimeout("unix", socketPath, 2*time.Second)
+						clientConnection, err = net.DialTimeout(gardenListenNetwork, gardenListenAddr, 2*time.Second)
 						return clientConnection, err
 					}, lagertest.NewTestLogger("api-conn-dialer"))
 
